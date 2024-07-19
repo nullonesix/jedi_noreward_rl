@@ -16,13 +16,18 @@ An AI that learns to be a Jedi on its own.
 
 # Example Output
 
+(along with actual unsupervised automated gameplay)
 ```
 reward tensor(60.9559, grad_fn=<MseLossBackward0>)
 R tensor(83.9321, grad_fn=<AddBackward0>)
 1253
 framerate: 11.59739471885585
 ```
-(along with actual unsupervised automated gameplay)
+
+reward is the quality of the moment
+R is the expected future quality
+1253 is just the iteration number (how many times the agent just seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
+framerate is just the number of iterations the agent performs per second
 
 # How It Works
 
