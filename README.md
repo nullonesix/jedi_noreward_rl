@@ -1,6 +1,6 @@
 # Jedi No (External) Reward Reinforcement Learning
 
-An AI that learns to be a Jedi on its own.
+An AI that learns to be a Jedi on its own. All feedback comes from within the agent itself. Specificaly, it learns to predict the future and rewards itself for finding (image/pixel-based) states that it cannot anticipate. 
 
 ## Demo
 
