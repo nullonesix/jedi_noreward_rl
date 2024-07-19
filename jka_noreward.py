@@ -46,9 +46,19 @@ class CustomEnv(gym.Env):
         self.n_states = 0
         hwnd = win32gui.FindWindow(None, 'EternalJK')
         win32gui.SetForegroundWindow(hwnd)
-        bbox = win32gui.GetWindowRect(hwnd)
+        # bbox = win32gui.GetWindowRect(hwnd)
+
+        # Get the window's client area
+        rect = win32gui.GetClientRect(hwnd)
+        left, top = win32gui.ClientToScreen(hwnd, (rect[0], rect[1]))
+        right, bottom = win32gui.ClientToScreen(hwnd, (rect[2], rect[3]))
+        bbox = (left, top, right + 650, bottom + 520)
+
         img = ImageGrab.grab(bbox).resize((28,28))
-        # img.save('input.png')
+        # full_res = ImageGrab.grab(bbox)
+        # img.save('agent_view.png')
+        # full_res.save('full_res_view.png')
+        # sys.exit()
         state = torch.tensor(np.array(img)).float()
         self.previous_state = state
         # self.param1 = param1
@@ -169,7 +179,7 @@ class CustomEnv(gym.Env):
         # self.n_states += 1
         # reward = (phi_hat_state - phi_state).pow(2).sum().sqrt()
         reward = error_forward_model
-        print('reward', reward)
+        print('reward', reward.item())
         # print('reward.shape', reward.shape)
         done = False
         info = {}
@@ -202,7 +212,7 @@ class CustomEnv(gym.Env):
 n_train_processes = 1 # 3
 # learning_rate = 0.0002
 learning_rate = 1.0/802261.0
-update_interval = 1 # 5
+update_interval = 10 # 1 # 5
 gamma = 0.99 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
@@ -333,10 +343,11 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
         s = env.reset()
         while not done:
             n_iterations +=1
-            print(n_iterations)
-            print('framerate:', n_iterations / (time.time() - start_time))
+            # print(n_iterations)
+            # print('framerate:', n_iterations / (time.time() - start_time))
             if (n_iterations % 1000) == 0:
                 print('saving model..')
+                print(n_iterations, ':', 'R:', R, 'framerate:', n_iterations / (time.time() - start_time))
                 torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
                 torch.save(phi_model, 'jka_noreward_phi_model.pth')
                 torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
@@ -370,7 +381,7 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
             td_target_lst = []
             for reward in r_lst[::-1]:
                 R = gamma * R + reward
-                print('R', R)
+                # print('R', R)
                 # td_target_lst.append([R])
                 # print('R.shape', R.shape)
                 td_target_lst.append(torch.tensor(R))
@@ -455,12 +466,12 @@ if __name__ == '__main__':
     phi_model = PhiModel()
     inverse_model = InverseModel()
     forward_model = ForwardModel()
-    # print('loading model..')
-    # global_model = torch.load('jka_noreward_actorcritic_model.pth')
-    # phi_model = torch.load('jka_noreward_phi_model.pth')
-    # inverse_model = torch.load('jka_noreward_inverse_model.pth')
-    # forward_model = torch.load('jka_noreward_forward_model.pth')
-    # print('model loaded.')
+    print('loading model..')
+    global_model = torch.load('jka_noreward_actorcritic_model.pth')
+    phi_model = torch.load('jka_noreward_phi_model.pth')
+    inverse_model = torch.load('jka_noreward_inverse_model.pth')
+    forward_model = torch.load('jka_noreward_forward_model.pth')
+    print('model loaded.')
     # trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
     # print(f'Total number of trainable actor-critic model parameters: {trainable_actorcritic_params}')
     # trainable_inverse_params = sum(p.numel() for p in list(phi_model.parameters())+list(inverse_model.parameters()) if p.requires_grad)
