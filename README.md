@@ -2,6 +2,10 @@
 
 An AI that learns to be a Jedi on its own.
 
+## Demo
+
+https://youtu.be/2mIrj11kYDM
+
 ## Usage
 
 ```
