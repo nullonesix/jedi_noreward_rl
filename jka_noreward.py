@@ -56,10 +56,10 @@ def get_screenshot():
     )
     bbox = (rect.left, rect.top, rect.right, rect.bottom)
     img = ImageGrab.grab(bbox)
-    if 'view' in sys.argv:
+    if 'view' in sys.argv and n_iterations > 10:
         img.save('view.png')
     img = img.resize((input_width, input_height), PIL.Image.NEAREST)
-    if 'view' in sys.argv:
+    if 'view' in sys.argv and n_iterations > 10:
         img.save('agent_view.png')
         print('agent view size:', input_width, 'x', input_height)
         sys.exit()
@@ -80,11 +80,16 @@ def take_action(action):
     for i in range(len(key_possibles)):
         if action[i].item() == 1:
             pressed_keys.append(key_possibles[i])
+    if 'wonly' in sys.argv:
+        pressed_keys = [key for key in pressed_keys if key in ['w', 'e']]
     if pressed_keys:
         keyboard.press(','.join(pressed_keys))
-    for i in range(len(mouse_button_possibles)):
-        if action[i+len(key_possibles)].item() == 1:
-            mouse.press(button=mouse_button_possibles[i])
+    if 'wonly' in sys.argv:
+        pass
+    else:
+        for i in range(len(mouse_button_possibles)):
+            if action[i+len(key_possibles)].item() == 1:
+                mouse.press(button=mouse_button_possibles[i])
     for i in range(len(mouse_x_possibles)):
         if action[i+len(key_possibles)+len(mouse_button_possibles)].item() == 1:
             mouse_x += mouse_x_possibles[i]
@@ -115,6 +120,8 @@ class CustomEnv(gym.Env):
         img = get_screenshot()
         frame1 = self.previous_frame
         frame2 = torch.tensor(np.array(img)).float().to(device)
+        frame2[0][0][0] = n_iterations / (10 ** 7)
+        print('imprecise (Windows) time between frames:', frame2[0][0][0].item() - frame1[0][0][0].item())
         # assert frame1.mean() != frame2.mean()
         state = torch.cat([frame1, frame2], dim=0)
         phi_previous_state = phi_model(self.previous_state)
@@ -126,6 +133,10 @@ class CustomEnv(gym.Env):
         print('error_inverse_model:', error_inverse_model.item())
         optimizer_inverse.zero_grad()
         error_inverse_model.backward()
+        if 'sign' in sys.argv:
+            for p in list(inverse_model.parameters())+list(phi_model.parameters()):
+                # assert p.grad.square().mean() > 0
+                p.grad = torch.sign(p.grad)
         optimizer_inverse.step()
         phi_previous_state_f = phi_model(self.previous_state)
         action_f = action.clone()
@@ -135,6 +146,10 @@ class CustomEnv(gym.Env):
         print('error_forward_model:', error_forward_model.item())
         optimizer_forward.zero_grad()
         error_forward_model.backward()
+        if 'sign' in sys.argv:
+            for p in forward_model.parameters():
+                # assert p.grad.square().mean() > 0
+                p.grad = torch.sign(p.grad)
         optimizer_forward.step()
         reward = error_forward_model
         print('reward:', reward.item())
@@ -166,7 +181,7 @@ mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0
 mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
 n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)+len(mouse_y_possibles)
 n_train_processes = 1 # 3
-update_interval = 100 # 10 # 1 # 5
+update_interval = 10 # 10 # 1 # 5
 gamma = 0.98 # 0.999 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
@@ -184,6 +199,7 @@ mouse_rescaling_factor = 10
 dim_phi = 100
 action_predictability_factor = 100
 n_transformer_layers = 1
+n_iterations = 1
 
 class ActorCritic(nn.Module):
     def __init__(self):
@@ -277,7 +293,7 @@ class InverseModel(nn.Module):
         return x
 
 def train(rank):
-    n_iterations = 1
+    global n_iterations
     local_model = ActorCritic().to(device)
     local_model.load_state_dict(global_model.state_dict())
     env = CustomEnv()
@@ -332,6 +348,10 @@ def train(rank):
             optimizer.zero_grad()
             time_actor_start = time.time()
             loss.mean().backward()
+            if 'sign' in sys.argv:
+                for p in local_model.parameters():
+                    # assert p.grad.square().mean() > 0
+                    p.grad = torch.sign(p.grad)
             for global_param, local_param in zip(global_model.parameters(), local_model.parameters()):
                 global_param._grad = local_param.grad
             optimizer.step()
@@ -383,9 +403,15 @@ if __name__ == '__main__':
     print(f'Total number of trainable forward model parameters: {trainable_forward_params}')
     if 'show' in sys.argv:
         sys.exit()
-    optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
-    optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
-    optimizer_forward = optim.Adam(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
+    if 'sign' in sys.argv:
+        print('using sign gradient descent.')
+        optimizer = optim.SGD(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
+        optimizer_inverse = optim.SGD(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
+        optimizer_forward = optim.SGD(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
+    else:
+        optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
+        optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
+        optimizer_forward = optim.Adam(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
     global_model.share_memory()
     train(rank=1)
     sys.exit()
