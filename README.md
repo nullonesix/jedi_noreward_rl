@@ -62,34 +62,34 @@ mean error actor critic model: 0.13396330177783966
 ```
 ## Hyperparameters
 
+The things that you usually tune by hand at the end.
+
 ```py
 # Hyperparameters
-key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e'] # legend: [forward, left, back, right, style, alt attack, center view]
+key_possibles = ['w', 'a', 's', 'd', 'space', 'r', 'e'] # legend: [forward, left, back, right, style, use, center view]
 mouse_button_possibles = ['left', 'middle', 'right'] # legend: [attack, crouch, jump]
 mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 30.0, 60.0, 100.0, 200.0, 300.0, 500.0,1000.0]
 mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
 n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)+len(mouse_y_possibles)
 n_train_processes = 1 # 3
-# learning_rate = 0.0002
-# learning_rate = 1.0/802261.0
-update_interval = 1 # 10 # 1 # 5
-gamma = 0.999 # 0.98
+update_interval = 100 # 10 # 1 # 5
+gamma = 0.98 # 0.999 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
-n_filters = 128 # 256 # 512
+n_filters = 64 # 128 # 256 # 512
 input_rescaling_factor = 2
 input_height = input_rescaling_factor * 28
 input_width = input_rescaling_factor * 28
-# conv_output_size = n_filters
-conv_output_size = 44928 # 179712 # 179712 # 86528 # 346112 # 73728
-# conv_output_size = 64
+conv_output_size = 22464 # 44928 # 179712 # 179712 # 86528 # 346112 # 73728
 pooling_kernel_size = input_rescaling_factor * 2 # 16
-device = torch.device("cuda")
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-forward_model_width = 1024 # 2048
-inverse_model_width = 1024 # 2048
-mouse_rescaling_factor = 50
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print('using device:', device)
+forward_model_width = 4096 #2048
+inverse_model_width = 1024 #2048
+mouse_rescaling_factor = 10
 dim_phi = 100
+action_predictability_factor = 100
+n_transformer_layers = 1
 ```
 
 ## Based On
