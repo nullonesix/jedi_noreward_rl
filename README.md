@@ -26,7 +26,7 @@ framerate: 11.59739471885585
 
 - reward is the quality of the moment
 - R is the expected future quality
-- 1253 is just the iteration number (how many times the agent just seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
+- 1253 is just the iteration number (how many times the agent has seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
 - framerate is just the number of iterations the agent performs per second (can be increased by using smaller neural networks, for example)
 
 # How It Works
@@ -35,19 +35,17 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 
 ![intrinsic agency](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/noreward.png)
 
-R is the cumulative expected future rewards (with exponential decay factor gamma = 0.99, ie future rewards are less desirable than the same immediate rewards)
+- R is the cumulative expected future rewards (with exponential decay factor gamma = 0.99, ie future rewards are less desirable than the same immediate rewards)
+- so for example if the AI is playing at 10 frames per second then a reward of 100 two seconds into the future is woth gamma^(2*10) * 100 = (0.99)^20 * 100 = 8.17
+- so the further into the future a reward is, the more it is decayed (which is standard in reinforcement learning)
+- the key difference here is that the rewards are not external (eg via a game score) but internal (ie "curiosity" as computed by the agent)
+- to quote the paper: "We formulate curiosity as the error in an agent’s ability to predict the consequence of its own actions in a visual feature space learned by a self-supervised inverse dynamics model."
+- intuitively this means the agent is drawn towards outcomes it cannot itself anticipate
+- theoretically this motivates the agent to not stand still, to explore other areas of the map, and to engage with other players 
 
-so for example if the AI is playing at 10 frames per second then a reward of 100 two seconds into the future is woth gamma^(2*10) * 100 = (0.99)^20 * 100 = 8.17
+# Future Work
 
-so the further into the future a reward is, the more it is decayed (which is standard in reinforcement learning)
-
-the key difference here is that the rewards are not external (eg via a game score) but internal (ie "curiosity" as computed by the agent)
-
-to quote the paper: "We formulate curiosity as the error in an agent’s ability to predict the consequence of its own actions in a visual feature space learned by a self-supervised inverse dynamics model."
-
-intuitively this means the agent is drawn towards outcomes it cannot itself anticipate
-
-theoretically this motivates the agent to not stand still, to explore other areas of the map, and to engage with other players 
-
+- stacked frames for better time/motion perception
+- a memory of the past via LSTM (as done in the curiosity paper) or transformer
 
 
