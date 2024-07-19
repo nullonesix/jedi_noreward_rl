@@ -36,7 +36,7 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 ![intrinsic agency](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/noreward.png)
 
 - R is the cumulative expected future rewards (with exponential decay factor gamma = 0.99, ie future rewards are less desirable than the same immediate rewards)
-- so for example if the AI is playing at 10 frames per second then a reward of 100 two seconds into the future is woth gamma^(2*10) * 100 = (0.99)^20 * 100 = 8.17
+- so for example if the AI is playing at 10 frames per second then a reward of 100 two seconds into the future is worth gamma^(2*10) * 100 = (0.99)^20 * 100 = 8.17
 - so the further into the future a reward is, the more it is decayed (which is standard in reinforcement learning)
 - the key difference here is that the rewards are not external (eg via a game score) but internal (ie "curiosity" as computed by the agent)
 - to quote the paper: "We formulate curiosity as the error in an agent’s ability to predict the consequence of its own actions in a visual feature space learned by a self-supervised inverse dynamics model."
