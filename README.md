@@ -62,7 +62,7 @@ mean error actor critic model: 0.13396330177783966
 ```
 ## Hyperparameters
 
-The things that you usually tune by hand at the end.
+The things that you usually tune by hand. For eaxmple, I'm running this on a laptop GPU, someone with many high-end GPUs might wish to increase the size of their neural networks. Alternatively someone running on CPU might which to decrease their sizes in order to achieve an agent framerate of at least 15 iterations per second.
 
 ```py
 # Hyperparameters
