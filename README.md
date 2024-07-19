@@ -46,6 +46,7 @@ error_inverse_model: 0.46000540256500244
 error_forward_model: 150.2513427734375
 reward: 150.2513427734375
 mean error actor critic model: 8.75518798828125
+...
 ```
 
 ## Based On
