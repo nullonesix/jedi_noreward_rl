@@ -63,7 +63,7 @@ before resizing:
 
 ![full view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/full_res_view.png)
 
-after resizing, but before grayscaling:
+after resizing (ie true size view), but before grayscaling:
 
 ![true size view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/agent_view.png)
 
