@@ -54,12 +54,12 @@ class CustomEnv(gym.Env):
         right, bottom = win32gui.ClientToScreen(hwnd, (rect[2], rect[3]))
         bbox = (left, top, right + 650, bottom + 520)
 
-        img = ImageGrab.grab(bbox).resize((28,28))
+        img = ImageGrab.grab(bbox).resize((input_width, input_height))
         # full_res = ImageGrab.grab(bbox)
         # img.save('agent_view.png')
         # full_res.save('full_res_view.png')
         # sys.exit()
-        state = torch.tensor(np.array(img)).float()
+        state = torch.tensor(np.array(img)).float().to(device)
         self.previous_state = state
         # self.param1 = param1
         # self.param2 = param2
@@ -125,7 +125,7 @@ class CustomEnv(gym.Env):
         bbox = win32gui.GetWindowRect(hwnd)
         img = ImageGrab.grab(bbox).resize((28,28))
         # img.save('input.png')
-        state = torch.tensor(np.array(img)).float()
+        state = torch.tensor(np.array(img)).float().to(device)
         
         phi_previous_state = phi_model(self.previous_state)
         # phi_previous_state_f = phi_previous_state.clone()
@@ -179,7 +179,7 @@ class CustomEnv(gym.Env):
         # self.n_states += 1
         # reward = (phi_hat_state - phi_state).pow(2).sum().sqrt()
         reward = error_forward_model
-        print('reward', reward.item())
+        print('reward:', reward.item())
         # print('reward.shape', reward.shape)
         done = False
         info = {}
@@ -195,7 +195,7 @@ class CustomEnv(gym.Env):
         bbox = win32gui.GetWindowRect(hwnd)
         img = ImageGrab.grab(bbox).resize((28,28))
         # img.save('input.png')
-        state = torch.tensor(np.array(img)).float()
+        state = torch.tensor(np.array(img)).float().to(device)
         self.average_state = state
         self.n_states = 1
         return state
@@ -212,24 +212,44 @@ class CustomEnv(gym.Env):
 n_train_processes = 1 # 3
 # learning_rate = 0.0002
 learning_rate = 1.0/802261.0
-update_interval = 10 # 1 # 5
+update_interval = 10 # 10 # 1 # 5
 gamma = 0.99 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
+n_filters = 512
+input_height = 28
+input_width = 28
+conv_output_size = n_filters
+# conv_output_size = 64
+pooling_kernel_size = 16
+device = torch.device("cuda")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Actions
 # w, a, s, d, space, ctrl, mouse_left, mouse_middle, mouse_right, mouse_deltaX, mouse_deltaY
+
+def _get_conv_output_size(height, width, n_filters):
+    # First convolutional layer
+    height = height - 2
+    width = width - 2
+    
+    # Second convolutional layer
+    height = height - 2
+    width = width - 2
+    
+    # Calculate the flattened size
+    return n_filters * height * width
 
 
 class ActorCritic(nn.Module):
     def __init__(self):
         super(ActorCritic, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.conv1 = nn.Conv2d(1, n_filters, 3, 1)
+        self.conv2 = nn.Conv2d(n_filters, n_filters, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc_pi = nn.Linear(9216, (10+19+13)*2)
-        self.fc_v = nn.Linear(9216, 1)
+        self.fc_pi = nn.Linear(conv_output_size, (10+19+13)*2)
+        self.fc_v = nn.Linear(conv_output_size, 1)
 
     def pi(self, x, softmax_dim=-1):
         if len(x.shape) == 3:
@@ -240,7 +260,7 @@ class ActorCritic(nn.Module):
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
-        x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, pooling_kernel_size)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc_pi(x)
@@ -257,7 +277,7 @@ class ActorCritic(nn.Module):
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
-        x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, pooling_kernel_size)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         v = self.fc_v(x)
@@ -267,11 +287,11 @@ class ActorCritic(nn.Module):
 class PhiModel(nn.Module):
     def __init__(self):
         super(PhiModel, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 3, 1)
-        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.conv1 = nn.Conv2d(1, n_filters, 3, 1)
+        self.conv2 = nn.Conv2d(n_filters, n_filters, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(9216, 100)
+        self.fc1 = nn.Linear(conv_output_size, 100)
 
     def forward(self, x):
         if len(x.shape) == 3:
@@ -282,7 +302,7 @@ class PhiModel(nn.Module):
         x = F.relu(x)
         x = self.conv2(x)
         x = F.relu(x)
-        x = F.max_pool2d(x, 2)
+        x = F.max_pool2d(x, pooling_kernel_size)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
@@ -317,8 +337,8 @@ class InverseModel(nn.Module):
         return x
 
 def train(global_model, phi_model, inverse_model, forward_model, rank):
-    n_iterations = 0
-    local_model = ActorCritic()
+    n_iterations = 1
+    local_model = ActorCritic().to(device)
     local_model.load_state_dict(global_model.state_dict())
 
     trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
@@ -342,9 +362,9 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
         done = False
         s = env.reset()
         while not done:
-            n_iterations +=1
+            # n_iterations +=1
             # print(n_iterations)
-            # print('framerate:', n_iterations / (time.time() - start_time))
+            # print('framerate:', update_interval * n_iterations / (time.time() - start_time))
             if (n_iterations % 1000) == 0:
                 print('saving model..')
                 print(n_iterations, ':', 'R:', R, 'framerate:', n_iterations / (time.time() - start_time))
@@ -355,11 +375,14 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
                 print('model saved.')
             s_lst, a_lst, r_lst = [], [], []
             for t in range(update_interval):
+                n_iterations +=1
+                print('n_iterations:', n_iterations)
+                print('framerate:', n_iterations / (time.time() - start_time))
                 # prob = local_model.pi(torch.from_numpy(s).float())
                 prob = local_model.pi(s)
                 m = Categorical(prob)
                 # a = m.sample().item()
-                a = m.sample()
+                a = m.sample().to(device)
                 # print('a.shape', a.shape)
                 # print('a', a)
                 # print('a[0].item()', a[0].item())
@@ -462,16 +485,17 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
 
 
 if __name__ == '__main__':
-    global_model = ActorCritic()
-    phi_model = PhiModel()
-    inverse_model = InverseModel()
-    forward_model = ForwardModel()
-    print('loading model..')
-    global_model = torch.load('jka_noreward_actorcritic_model.pth')
-    phi_model = torch.load('jka_noreward_phi_model.pth')
-    inverse_model = torch.load('jka_noreward_inverse_model.pth')
-    forward_model = torch.load('jka_noreward_forward_model.pth')
-    print('model loaded.')
+    global_model = ActorCritic().to(device)
+    phi_model = PhiModel().to(device)
+    inverse_model = InverseModel().to(device)
+    forward_model = ForwardModel().to(device)
+    if not "new" in sys.argv:
+        print('loading model..')
+        global_model = torch.load('jka_noreward_actorcritic_model.pth')
+        phi_model = torch.load('jka_noreward_phi_model.pth')
+        inverse_model = torch.load('jka_noreward_inverse_model.pth')
+        forward_model = torch.load('jka_noreward_forward_model.pth')
+        print('model loaded.')
     # trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
     # print(f'Total number of trainable actor-critic model parameters: {trainable_actorcritic_params}')
     # trainable_inverse_params = sum(p.numel() for p in list(phi_model.parameters())+list(inverse_model.parameters()) if p.requires_grad)
