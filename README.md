@@ -47,6 +47,18 @@ error_forward_model: 150.2513427734375
 reward: 150.2513427734375
 mean error actor critic model: 8.75518798828125
 ...
+n_iterations: 1110
+framerate: 14.039405370448229
+error_inverse_model: 0.18923787772655487
+error_forward_model: 74.45198822021484
+reward: 74.45198822021484
+mean error actor critic model: 2.894500732421875
+n_iterations: 1111
+framerate: 14.039663828893318
+error_inverse_model: 0.4495146572589874
+error_forward_model: 75.67051696777344
+reward: 75.67051696777344
+mean error actor critic model: 0.13396330177783966
 ```
 
 ## Based On
