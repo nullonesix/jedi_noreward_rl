@@ -117,6 +117,7 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 
 - stacked frames for better time/motion perception
 - a memory of the past via LSTM (as done in the curiosity paper) or transformer
+- integrate YOLO-based aimbot: https://github.com/petercunha/Pine
 
 ## Agent Views
 
