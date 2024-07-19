@@ -17,6 +17,15 @@ first time:
 3. let it play at least 1000 iterations
 4. press c to stop
 ```
+see parameter counts:
+```
+PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py show
+loading model..
+model loaded.
+Total number of trainable actor-critic model parameters: 8631893
+Total number of trainable inverse model parameters: 14431886
+Total number of trainable forward model parameters: 4694116
+```
 load a saved model and let it play:
 ```
 PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py
@@ -37,15 +46,6 @@ error_inverse_model: 0.46000540256500244
 error_forward_model: 150.2513427734375
 reward: 150.2513427734375
 mean error actor critic model: 8.75518798828125
-```
-see parameter counts:
-```
-PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py show
-loading model..
-model loaded.
-Total number of trainable actor-critic model parameters: 8631893
-Total number of trainable inverse model parameters: 14431886
-Total number of trainable forward model parameters: 4694116
 ```
 
 ## Based On
