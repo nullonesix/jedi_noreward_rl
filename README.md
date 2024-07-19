@@ -9,7 +9,7 @@ An AI that learns to be a Jedi on its own.
 
 # Based On
 
-- https://github.com/pathak22/noreward-rl for the general concept of self-learning
+- https://github.com/pathak22/noreward-rl for the general concept of curiosity-driven learning and its formalization
 - https://github.com/seungeunrho/minimalRL for the A3C actor-critic reinforcement learning algorithm
 - https://github.com/pytorch/examples/blob/main/mnist/main.py for the convolutional neural network setup
 - https://github.com/TeaPearce/Counter-Strike_Behavioural_Cloning for the bucketing of mouse movements
