@@ -250,8 +250,8 @@ class CustomEnv(gym.Env):
         pass
 
 # Hyperparameters
-key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e']
-mouse_button_possibles = ['left', 'middle', 'right']
+key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e'] # legend: [forward, left, back, right, style, alt attack, center view]
+mouse_button_possibles = ['left', 'middle', 'right'] # legend: [attack, crouch, jump]
 mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 30.0, 60.0, 100.0, 200.0, 300.0, 500.0,1000.0]
 mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
 n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)+len(mouse_y_possibles)
