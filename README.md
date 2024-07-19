@@ -14,8 +14,35 @@ first time:
 ```
 1. Run EternalJK game and join a multiplayer server.
 2. python jka_noreward.py new
-3. let it play
+3. let it play at least 1000 iterations
 4. press c to stop
+```
+load a saved model and play:
+```
+PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py show
+loading model..
+model loaded.
+Total number of trainable actor-critic model parameters: 8631893
+Total number of trainable inverse model parameters: 14431886
+Total number of trainable forward model parameters: 4694116
+PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py
+loading model..
+model loaded.
+Total number of trainable actor-critic model parameters: 8631893
+Total number of trainable inverse model parameters: 14431886
+Total number of trainable forward model parameters: 4694116
+n_iterations: 2
+framerate: 46.34974169130039
+error_inverse_model: 0.37778469920158386
+error_forward_model: 200.05471801757812
+reward: 200.05471801757812
+mean error actor critic model: 4.398651123046875
+n_iterations: 3
+framerate: 7.07696755190778
+error_inverse_model: 0.46000540256500244
+error_forward_model: 150.2513427734375
+reward: 150.2513427734375
+mean error actor critic model: 8.75518798828125
 ```
 see parameter counts:
 ```
