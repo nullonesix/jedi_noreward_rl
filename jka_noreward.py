@@ -322,15 +322,15 @@ n_train_processes = 1 # 3
 # learning_rate = 0.0002
 # learning_rate = 1.0/802261.0
 update_interval = 10 # 10 # 1 # 5
-gamma = 0.999 # 0.98
+gamma = 0.98 # 0.999 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
-n_filters = 128 # 256 # 512
+n_filters = 64 # 128 # 256 # 512
 input_rescaling_factor = 2
 input_height = input_rescaling_factor * 28
 input_width = input_rescaling_factor * 28
 # conv_output_size = n_filters
-conv_output_size = 44928 # 179712 # 179712 # 86528 # 346112 # 73728
+conv_output_size = 22464 # 44928 # 179712 # 179712 # 86528 # 346112 # 73728
 # conv_output_size = 64
 pooling_kernel_size = input_rescaling_factor * 2 # 16
 device = torch.device("cuda")
@@ -340,6 +340,7 @@ inverse_model_width = 1024 #2048
 mouse_rescaling_factor = 10
 dim_phi = 100
 action_predictability_factor = 100
+n_transformer_layers = 1
 
 # Actions
 # w, a, s, d, space, ctrl, mouse_left, mouse_middle, mouse_right, mouse_deltaX, mouse_deltaY
@@ -362,10 +363,14 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         self.conv1 = nn.Conv2d(1, n_filters, 3, 1)
         self.conv2 = nn.Conv2d(n_filters, n_filters, 3, 1)
-        self.dropout1 = nn.Dropout(0.25)
-        self.dropout2 = nn.Dropout(0.5)
-        self.fc_pi = nn.Linear(conv_output_size, n_actions * 2)
-        self.fc_v = nn.Linear(conv_output_size, 1)
+        # self.dropout1 = nn.Dropout(0.25)
+        # self.dropout2 = nn.Dropout(0.5)
+        self.fc_pi_pre = nn.Linear(conv_output_size, dim_phi*2)
+        self.fc_v_pre = nn.Linear(conv_output_size, dim_phi*2)
+        self.transformer_pi = nn.Transformer(nhead=dim_phi*2, num_encoder_layers=n_transformer_layers, num_decoder_layers=n_transformer_layers, d_model=dim_phi*2, batch_first=True)
+        self.transformer_v = nn.Transformer(nhead=dim_phi*2, num_encoder_layers=n_transformer_layers, num_decoder_layers=n_transformer_layers, d_model=dim_phi*2, batch_first=True)
+        self.fc_pi_post = nn.Linear(dim_phi*2, n_actions * 2)
+        self.fc_v_post = nn.Linear(dim_phi*2, 1)
 
     def pi(self, x, softmax_dim=-1):
         if len(x.shape) == 3:
@@ -377,9 +382,11 @@ class ActorCritic(nn.Module):
         x = self.conv2(x)
         x = F.relu(x)
         x = F.max_pool2d(x, pooling_kernel_size)
-        x = self.dropout1(x)
+        # x = self.dropout1(x)
         x = torch.flatten(x, 1)
-        x = self.fc_pi(x)
+        x = self.fc_pi_pre(x)
+        x = self.transformer_pi(x, x)
+        x = self.fc_pi_post(x)
         x = x.reshape(x.shape[0], n_actions, 2)
         prob = F.softmax(x, dim=softmax_dim)
         return prob
@@ -394,9 +401,11 @@ class ActorCritic(nn.Module):
         x = self.conv2(x)
         x = F.relu(x)
         x = F.max_pool2d(x, pooling_kernel_size)
-        x = self.dropout1(x)
+        # x = self.dropout1(x)
         x = torch.flatten(x, 1)
-        v = self.fc_v(x)
+        x = self.fc_v_pre(x)
+        x = self.transformer_v(x, x)
+        v = self.fc_v_post(x)
         return v
 
 
@@ -405,8 +414,8 @@ class PhiModel(nn.Module):
         super(PhiModel, self).__init__()
         self.conv1 = nn.Conv2d(1, n_filters, 3, 1)
         self.conv2 = nn.Conv2d(n_filters, n_filters, 3, 1)
-        self.dropout1 = nn.Dropout(0.25)
-        self.dropout2 = nn.Dropout(0.5)
+        # self.dropout1 = nn.Dropout(0.25)
+        # self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(conv_output_size, dim_phi)
 
     def forward(self, x):
@@ -419,46 +428,69 @@ class PhiModel(nn.Module):
         x = self.conv2(x)
         x = F.relu(x)
         x = F.max_pool2d(x, pooling_kernel_size)
-        x = self.dropout1(x)
+        # x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         return x
 
+# class ForwardModel(nn.Module):
+#     def __init__(self):
+#         super(ForwardModel, self).__init__()
+#         self.fc1 = nn.Linear(n_actions+dim_phi, forward_model_width)
+#         self.fc2 = nn.Linear(forward_model_width, forward_model_width)
+#         self.fc3 = nn.Linear(forward_model_width, dim_phi)
+
+#     def forward(self, x):
+#         # if len(x.shape) == 3:
+#             # x = torch.unsqueeze(x, dim=0)
+#         # x = x.permute(0, 3, 1, 2)
+#         x_init = x # torch.cat([action_f, phi_previous_state_f], dim=1)
+#         x = self.fc1(x)
+#         x = F.relu(x)
+#         x = self.fc2(x)
+#         x = F.relu(x)
+#         x = self.fc3(x) + torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi) # residual skip connection
+#         return x
+    
 class ForwardModel(nn.Module):
     def __init__(self):
         super(ForwardModel, self).__init__()
-        self.fc1 = nn.Linear(n_actions+dim_phi, forward_model_width)
-        self.fc2 = nn.Linear(forward_model_width, forward_model_width)
-        self.fc3 = nn.Linear(forward_model_width, dim_phi)
+        self.transformer = nn.Transformer(nhead=n_actions+dim_phi, num_encoder_layers=n_transformer_layers, num_decoder_layers=n_transformer_layers, d_model=n_actions+dim_phi, batch_first=True)
+        self.fc1 = nn.Linear(n_actions+dim_phi, dim_phi)
 
     def forward(self, x):
-        # if len(x.shape) == 3:
-            # x = torch.unsqueeze(x, dim=0)
-        # x = x.permute(0, 3, 1, 2)
-        x_init = x # torch.cat([action_f, phi_previous_state_f], dim=1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x) + torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi) # residual skip connection
+        x_init = x
+        x = self.transformer(x, x)
+        x = self.fc1(x) + torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi)
         return x
 
+# class InverseModel(nn.Module):
+#     def __init__(self):
+#         super(InverseModel, self).__init__()
+#         self.fc1 = nn.Linear(dim_phi * 2, inverse_model_width)
+#         self.fc2 = nn.Linear(inverse_model_width, inverse_model_width)
+#         self.fc3 = nn.Linear(inverse_model_width, n_actions)
+
+#     def forward(self, x):
+#         # if len(x.shape) == 3:
+#             # x = torch.unsqueeze(x, dim=0)
+#         # x = x.permute(0, 3, 1, 2)
+#         x = self.fc1(x)
+#         x = F.relu(x)
+#         x = self.fc2(x)
+#         x = F.relu(x)
+#         x = self.fc3(x)
+#         return x
+    
 class InverseModel(nn.Module):
     def __init__(self):
         super(InverseModel, self).__init__()
-        self.fc1 = nn.Linear(200, inverse_model_width)
-        self.fc2 = nn.Linear(inverse_model_width, inverse_model_width)
-        self.fc3 = nn.Linear(inverse_model_width, n_actions)
+        self.transformer = nn.Transformer(nhead=dim_phi*2, num_encoder_layers=n_transformer_layers, num_decoder_layers=n_transformer_layers, d_model=dim_phi*2, batch_first=True)
+        self.fc1 = nn.Linear(dim_phi*2, n_actions)
 
     def forward(self, x):
-        # if len(x.shape) == 3:
-            # x = torch.unsqueeze(x, dim=0)
-        # x = x.permute(0, 3, 1, 2)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.fc2(x)
-        x = F.relu(x)
-        x = self.fc3(x)
+        x = self.transformer(x, x)
+        x = self.fc1(x) #+ torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi)
         return x
 
 # def train(global_model, phi_model, inverse_model, forward_model, rank):
