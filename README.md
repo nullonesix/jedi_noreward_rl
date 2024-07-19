@@ -12,7 +12,7 @@ https://youtu.be/2mIrj11kYDM
 
 ```
 1. Run EternalJK game and join a multiplayer server.
-2. python jka_noreward.py
+2. python jka_noreward.py new
 3. let it play
 4. press c to stop
 ```
