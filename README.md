@@ -10,12 +10,23 @@ https://youtu.be/2mIrj11kYDM
 
 ## Usage
 
+first time:
 ```
 1. Run EternalJK game and join a multiplayer server.
 2. python jka_noreward.py new
 3. let it play
 4. press c to stop
 ```
+see parameter counts:
+```
+PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py show
+loading model..
+model loaded.
+Total number of trainable actor-critic model parameters: 8631893
+Total number of trainable inverse model parameters: 14431886
+Total number of trainable forward model parameters: 4694116
+```
+
 ## Based On
 
 - https://github.com/pathak22/noreward-rl for the general concept of curiosity-driven learning and its formalization
