@@ -138,6 +138,7 @@ class CustomEnv(gym.Env):
         action = action.float()
 
         error_inverse_model = torch.nn.functional.mse_loss(action_hat, action, size_average=None, reduce=None, reduction='mean') # input, target
+        print('error_inverse_model:', error_inverse_model.item())
         optimizer_inverse.zero_grad()
         # error_inverse_model.backward(retain_graph=True)
         error_inverse_model.backward()
@@ -167,6 +168,7 @@ class CustomEnv(gym.Env):
         # optimizer_inverse.step()
 
         error_forward_model = torch.nn.functional.mse_loss(phi_hat_state_f, phi_state_f, size_average=None, reduce=None, reduction='mean') # input, target
+        print('error_forward_model:', error_forward_model.item())
         optimizer_forward.zero_grad()
         error_forward_model.backward()
         optimizer_forward.step()
@@ -211,34 +213,37 @@ class CustomEnv(gym.Env):
 # Hyperparameters
 n_train_processes = 1 # 3
 # learning_rate = 0.0002
-learning_rate = 1.0/802261.0
-update_interval = 10 # 10 # 1 # 5
+# learning_rate = 1.0/802261.0
+update_interval = 1 # 10 # 1 # 5
 gamma = 0.99 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
 n_filters = 512
 input_height = 28
 input_width = 28
-conv_output_size = n_filters
+# conv_output_size = n_filters
+conv_output_size = 73728
 # conv_output_size = 64
-pooling_kernel_size = 16
+pooling_kernel_size = 2 # 16
 device = torch.device("cuda")
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+forward_model_width = 2048
+inverse_model_width = 2048
 
 # Actions
 # w, a, s, d, space, ctrl, mouse_left, mouse_middle, mouse_right, mouse_deltaX, mouse_deltaY
 
-def _get_conv_output_size(height, width, n_filters):
-    # First convolutional layer
-    height = height - 2
-    width = width - 2
+# def _get_conv_output_size(height, width, n_filters):
+#     # First convolutional layer
+#     height = height - 2
+#     width = width - 2
     
-    # Second convolutional layer
-    height = height - 2
-    width = width - 2
+#     # Second convolutional layer
+#     height = height - 2
+#     width = width - 2
     
-    # Calculate the flattened size
-    return n_filters * height * width
+#     # Calculate the flattened size
+#     return n_filters * height * width
 
 
 class ActorCritic(nn.Module):
@@ -311,29 +316,37 @@ class PhiModel(nn.Module):
 class ForwardModel(nn.Module):
     def __init__(self):
         super(ForwardModel, self).__init__()
-        self.fc1 = nn.Linear(142, 142)
-        self.fc2 = nn.Linear(142, 100)
+        self.fc1 = nn.Linear(142, forward_model_width)
+        self.fc2 = nn.Linear(forward_model_width, forward_model_width)
+        self.fc3 = nn.Linear(forward_model_width, 100)
 
     def forward(self, x):
         # if len(x.shape) == 3:
             # x = torch.unsqueeze(x, dim=0)
         # x = x.permute(0, 3, 1, 2)
         x = self.fc1(x)
+        x = F.relu(x)
         x = self.fc2(x)
+        x = F.relu(x)
+        x = self.fc3(x)
         return x
 
 class InverseModel(nn.Module):
     def __init__(self):
         super(InverseModel, self).__init__()
-        self.fc1 = nn.Linear(200, 100)
-        self.fc2 = nn.Linear(100, 10+19+13)
+        self.fc1 = nn.Linear(200, inverse_model_width)
+        self.fc2 = nn.Linear(inverse_model_width, inverse_model_width)
+        self.fc3 = nn.Linear(inverse_model_width, 10+19+13)
 
     def forward(self, x):
         # if len(x.shape) == 3:
             # x = torch.unsqueeze(x, dim=0)
         # x = x.permute(0, 3, 1, 2)
         x = self.fc1(x)
+        x = F.relu(x)
         x = self.fc2(x)
+        x = F.relu(x)
+        x = self.fc3(x)
         return x
 
 def train(global_model, phi_model, inverse_model, forward_model, rank):
@@ -347,6 +360,9 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
     print(f'Total number of trainable inverse model parameters: {trainable_inverse_params}')
     trainable_forward_params = sum(p.numel() for p in forward_model.parameters() if p.requires_grad)
     print(f'Total number of trainable forward model parameters: {trainable_forward_params}')
+
+    if 'show' in sys.argv:
+        sys.exit()
 
     optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
     optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
@@ -457,7 +473,8 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
             # advantage = advantage.view_as(pi_a)
             # advantage = advantage.unsqueeze(-1) 
             loss = -torch.log(pi_a) * advantage.detach() + F.smooth_l1_loss(local_model.v(s_batch), td_target.detach())
-
+            # print('error actor critic model:', loss)
+            print('mean error actor critic model:', loss.mean().item())
             optimizer.zero_grad()
             loss.mean().backward()
             for global_param, local_param in zip(global_model.parameters(), local_model.parameters()):
