@@ -24,10 +24,10 @@ R tensor(83.9321, grad_fn=<AddBackward0>)
 framerate: 11.59739471885585
 ```
 
-reward is the quality of the moment
-R is the expected future quality
-1253 is just the iteration number (how many times the agent just seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
-framerate is just the number of iterations the agent performs per second
+- reward is the quality of the moment
+- R is the expected future quality
+- 1253 is just the iteration number (how many times the agent just seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
+- framerate is just the number of iterations the agent performs per second (can be increased by using smaller neural networks, for example)
 
 # How It Works
 
