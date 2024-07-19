@@ -2,19 +2,19 @@
 
 An AI that learns to be a Jedi on its own.
 
-# Usage
+## Usage
 
 1. Run EternalJK game and join a multiplayer server.
 2. python jka_noreward.py
 
-# Based On
+## Based On
 
 - https://github.com/pathak22/noreward-rl for the general concept of curiosity-driven learning and its formalization
 - https://github.com/seungeunrho/minimalRL for the A3C actor-critic reinforcement learning algorithm
 - https://github.com/pytorch/examples/blob/main/mnist/main.py for the convolutional neural network setup
 - https://github.com/TeaPearce/Counter-Strike_Behavioural_Cloning for the non-uniform bucketing of mouse movements
 
-# Example Output
+## Example Output
 
 (along with actual unsupervised automated gameplay)
 ```
@@ -29,7 +29,7 @@ framerate: 11.59739471885585
 - 1253 is just the iteration number (how many times the agent has seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
 - framerate is just the number of iterations the agent performs per second (can be increased by using smaller neural networks, for example)
 
-# How It Works
+## How It Works
 
 Here reward is the intrinsic reward as described in figure 2 of https://pathak22.github.io/noreward-rl/resources/icml17.pdf:
 
@@ -43,7 +43,7 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 - intuitively this means the agent is drawn towards outcomes it cannot itself anticipate
 - theoretically this motivates the agent to not stand still, to explore other areas of the map, and to engage with other players 
 
-# Future Work
+## Future Work
 
 - stacked frames for better time/motion perception
 - a memory of the past via LSTM (as done in the curiosity paper) or transformer
