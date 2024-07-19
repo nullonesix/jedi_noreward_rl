@@ -60,6 +60,37 @@ error_forward_model: 75.67051696777344
 reward: 75.67051696777344
 mean error actor critic model: 0.13396330177783966
 ```
+## Hyperparameters
+
+```py
+# Hyperparameters
+key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e'] # legend: [forward, left, back, right, style, alt attack, center view]
+mouse_button_possibles = ['left', 'middle', 'right'] # legend: [attack, crouch, jump]
+mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 30.0, 60.0, 100.0, 200.0, 300.0, 500.0,1000.0]
+mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
+n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)+len(mouse_y_possibles)
+n_train_processes = 1 # 3
+# learning_rate = 0.0002
+# learning_rate = 1.0/802261.0
+update_interval = 1 # 10 # 1 # 5
+gamma = 0.999 # 0.98
+max_train_ep = 10000000000000000000000000000 # 300
+max_test_ep = 10000000000000000000000000000 #400
+n_filters = 128 # 256 # 512
+input_rescaling_factor = 2
+input_height = input_rescaling_factor * 28
+input_width = input_rescaling_factor * 28
+# conv_output_size = n_filters
+conv_output_size = 44928 # 179712 # 179712 # 86528 # 346112 # 73728
+# conv_output_size = 64
+pooling_kernel_size = input_rescaling_factor * 2 # 16
+device = torch.device("cuda")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+forward_model_width = 1024 # 2048
+inverse_model_width = 1024 # 2048
+mouse_rescaling_factor = 50
+dim_phi = 100
+```
 
 ## Based On
 
@@ -67,21 +98,6 @@ mean error actor critic model: 0.13396330177783966
 - https://github.com/seungeunrho/minimalRL for the A3C actor-critic reinforcement learning algorithm
 - https://github.com/pytorch/examples/blob/main/mnist/main.py for the convolutional neural network setup
 - https://github.com/TeaPearce/Counter-Strike_Behavioural_Cloning for the non-uniform bucketing of mouse movements
-
-## Example Output
-
-(along with actual unsupervised automated gameplay)
-```
-reward tensor(60.9559, grad_fn=<MseLossBackward0>)
-R tensor(83.9321, grad_fn=<AddBackward0>)
-1253
-framerate: 11.59739471885585
-```
-
-- reward is the quality of the moment
-- R is the expected future quality
-- 1253 is just the iteration number (how many times the agent has seen the game screen and taken an action and trained its 3 neural networks, all of these are done in lockstep)
-- framerate is just the number of iterations the agent performs per second (can be increased by using smaller neural networks, for example)
 
 ## How It Works
 
