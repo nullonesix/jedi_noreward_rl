@@ -365,19 +365,27 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
             # n_iterations +=1
             # print(n_iterations)
             # print('framerate:', update_interval * n_iterations / (time.time() - start_time))
-            if (n_iterations % 1000) == 0:
-                print('saving model..')
-                print(n_iterations, ':', 'R:', R, 'framerate:', n_iterations / (time.time() - start_time))
-                torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
-                torch.save(phi_model, 'jka_noreward_phi_model.pth')
-                torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
-                torch.save(forward_model, 'jka_noreward_forward_model.pth')
-                print('model saved.')
+            # if (n_iterations % 1000) == 0:
+            #     print('saving model..')
+            #     print(n_iterations, ':', 'R:', R, 'framerate:', n_iterations / (time.time() - start_time))
+            #     torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
+            #     torch.save(phi_model, 'jka_noreward_phi_model.pth')
+            #     torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
+            #     torch.save(forward_model, 'jka_noreward_forward_model.pth')
+            #     print('model saved.')
             s_lst, a_lst, r_lst = [], [], []
             for t in range(update_interval):
                 n_iterations +=1
                 print('n_iterations:', n_iterations)
                 print('framerate:', n_iterations / (time.time() - start_time))
+                if (n_iterations % 1000) == 0:
+                    print('saving model..')
+                    print(n_iterations, ':', 'R:', R, 'framerate:', n_iterations / (time.time() - start_time))
+                    torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
+                    torch.save(phi_model, 'jka_noreward_phi_model.pth')
+                    torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
+                    torch.save(forward_model, 'jka_noreward_forward_model.pth')
+                    print('model saved.')
                 # prob = local_model.pi(torch.from_numpy(s).float())
                 prob = local_model.pi(s)
                 m = Categorical(prob)
