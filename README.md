@@ -39,7 +39,7 @@ R is the cumulative expected future rewards (with exponential decay factor gamma
 
 so for example if the AI is playing at 10 frames per second then a reward of 100 two seconds into the future is woth gamma^(2*10) * 100 = (0.99)^20 * 100 = 8.17
 
-so the further into the future a reward is, the more it is decayed (with is standard in reinforcement learning)
+so the further into the future a reward is, the more it is decayed (which is standard in reinforcement learning)
 
 the key difference here is that the rewards are not external (eg via a game score) but internal (ie "curiosity" as computed by the agent)
 
