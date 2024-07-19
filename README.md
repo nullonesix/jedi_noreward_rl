@@ -25,5 +25,7 @@ framerate: 11.59739471885585
 
 Here reward is the intrinsic reward as described in figure 2 of https://pathak22.github.io/noreward-rl/resources/icml17.pdf:
 
+![intrinsic agency](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/noreward.png)
+
 
 
