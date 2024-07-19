@@ -17,7 +17,7 @@ first time:
 3. let it play at least 1000 iterations
 4. press c to stop
 ```
-load a saved model and play:
+load a saved model and let it play:
 ```
 PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py
 loading model..
