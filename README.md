@@ -13,9 +13,9 @@ https://youtu.be/2mIrj11kYDM
 first time:
 ```
 1. Run EternalJK game and join a multiplayer server.
-2. python jka_noreward.py new
-3. let it play at least 1000 iterations
-4. press c to stop
+3. Configure your controls to be the same as mine (see first 2 hyperparameters below).
+3. python jka_noreward.py new
+4. let it play
 ```
 see parameter counts:
 ```
