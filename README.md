@@ -1,4 +1,4 @@
-# Jedi No Reward Reinforcement Learning
+# Jedi No (External) Reward Reinforcement Learning
 
 An AI that learns to be a Jedi on its own.
 
