@@ -8,6 +8,8 @@ import torch.multiprocessing as mp
 import time
 import win32gui
 from PIL import ImageGrab
+# import pyscreenshot as ImageGrab
+import PIL
 import torchvision.transforms as transforms
 
 grayscale = transforms.Grayscale(num_output_channels=1)
@@ -22,6 +24,12 @@ import mouse
 import ctypes as cts
 import pynput
 import sys
+import win32gui, win32ui, win32con, win32api
+import ctypes
+from ctypes import wintypes
+
+DWMWA_EXTENDED_FRAME_BOUNDS = 9
+rect = wintypes.RECT()
 
 def set_pos(dx, dy):
     # print('dx', dx, 'dy', dy)
@@ -36,6 +44,26 @@ def set_pos(dx, dy):
     command=pynput._util.win32.INPUT(cts.c_ulong(0), ii_)
     cts.windll.user32.SendInput(1, cts.pointer(command), cts.sizeof(command))
 
+def get_screenshot():
+    hwnd = win32gui.FindWindow(None, 'EternalJK')
+    win32gui.SetForegroundWindow(hwnd)
+    ctypes.windll.dwmapi.DwmGetWindowAttribute(
+        hwnd,
+        DWMWA_EXTENDED_FRAME_BOUNDS,
+        ctypes.byref(rect),
+        ctypes.sizeof(rect)
+    )
+    bbox = (rect.left, rect.top, rect.right, rect.bottom)
+    img = ImageGrab.grab(bbox)
+    if 'view' in sys.argv:
+        img.save('view.png')
+    img = img.resize((input_width, input_height), PIL.Image.NEAREST)
+    if 'view' in sys.argv:
+        img.save('agent_view.png')
+        print('agent view size:', input_width, 'x', input_height)
+        sys.exit()
+    return img
+
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
     # metadata = {'render.modes': ['human']}
@@ -44,17 +72,18 @@ class CustomEnv(gym.Env):
         super(CustomEnv, self).__init__()
         self.average_state = 0
         self.n_states = 0
-        hwnd = win32gui.FindWindow(None, 'EternalJK')
-        win32gui.SetForegroundWindow(hwnd)
-        # bbox = win32gui.GetWindowRect(hwnd)
+        # hwnd = win32gui.FindWindow(None, 'EternalJK')
+        # win32gui.SetForegroundWindow(hwnd)
+        # # bbox = win32gui.GetWindowRect(hwnd)
 
-        # Get the window's client area
-        rect = win32gui.GetClientRect(hwnd)
-        left, top = win32gui.ClientToScreen(hwnd, (rect[0], rect[1]))
-        right, bottom = win32gui.ClientToScreen(hwnd, (rect[2], rect[3]))
-        bbox = (left, top, right + 650, bottom + 520)
+        # # Get the window's client area
+        # rect = win32gui.GetClientRect(hwnd)
+        # left, top = win32gui.ClientToScreen(hwnd, (rect[0], rect[1]))
+        # right, bottom = win32gui.ClientToScreen(hwnd, (rect[2], rect[3]))
+        # bbox = (left, top, right + 650, bottom + 520)
 
-        img = ImageGrab.grab(bbox).resize((input_width, input_height))
+        # img = ImageGrab.grab(bbox).resize((input_width, input_height), PIL.Image.NEAREST)
+        img = get_screenshot()
         
         if 'view' in sys.argv:
             img.save('agent_view.png')
@@ -81,7 +110,7 @@ class CustomEnv(gym.Env):
         # self.observation_space = spaces.Box(low=0, high=1, shape=(3,), dtype=np.float32)  # Example: 3-dimensional observation
 
     # def step(self, action):
-    def step(self, action, phi_model, inverse_model, forward_model, optimizer_inverse, optimizer_forward):
+    def step(self, action):
         
         # print('action.shape', action.shape)
         # Execute one time step within the environment
@@ -97,6 +126,7 @@ class CustomEnv(gym.Env):
 
 
         # key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e']
+        time_take_action = time.time()
         keyboard.release(','.join(key_possibles))
         mouse.release(button='left')
         mouse.release(button='middle')
@@ -149,12 +179,32 @@ class CustomEnv(gym.Env):
         print('mouse_dx:', mouse_x)
         print('mouse_dy:', mouse_y)
         set_pos(int(mouse_x/mouse_rescaling_factor), int(mouse_y/mouse_rescaling_factor))
+        print('take action time:', time.time() - time_take_action)
 
-        
-        hwnd = win32gui.FindWindow(None, 'EternalJK')
-        win32gui.SetForegroundWindow(hwnd)
-        bbox = win32gui.GetWindowRect(hwnd)
-        img = ImageGrab.grab(bbox).resize((input_width,input_height))
+        time_screenshot_start = time.time()
+        # hwnd = win32gui.FindWindow(None, 'EternalJK')
+        # win32gui.SetForegroundWindow(hwnd)
+        # bbox = win32gui.GetWindowRect(hwnd)
+        # print(bbox)
+        # Get the extended frame bounds
+        # ctypes.windll.dwmapi.DwmGetWindowAttribute(
+        #     hwnd,
+        #     DWMWA_EXTENDED_FRAME_BOUNDS,
+        #     ctypes.byref(rect),
+        #     ctypes.sizeof(rect)
+        # )
+        # bbox = (rect.left, rect.top, rect.right, rect.bottom)
+        # print('get window time:', time.time() - time_jk_start)
+        # time_grab_start = time.time()
+        # img = ImageGrab.grab(bbox)
+        # img = ImageGrab.grab(backend="mss", childprocess=False)
+        img = get_screenshot()
+        print('screenshot time:', time.time() - time_screenshot_start)
+        # img.save('view.png')
+        # sys.exit()
+        # time_resize_start = time.time()
+        # img = img.resize((input_width,input_height), PIL.Image.NEAREST)
+        # print('image resize time:', time.time() - time_resize_start)
         # img.save('input.png')
         # state = torch.tensor(np.array(img)).float().to(device)
         frame1 = self.previous_frame
@@ -162,13 +212,17 @@ class CustomEnv(gym.Env):
         # assert frame1.mean() != frame2.mean()
         state = torch.cat([frame1, frame2], dim=0)
         
+        time_phi_start = time.time()
         phi_previous_state = phi_model(self.previous_state)
+        print('phi model inference time:', time.time() - time_phi_start)
         # phi_previous_state_f = phi_previous_state.clone()
         # print('phi_previous_state.shape', phi_previous_state.shape)
         phi_state = phi_model(state)
         # print('phi_state.shape', phi_state.shape)
         # print('torch.cat([phi_previous_state, phi_state], dim=1).shape', torch.cat([phi_previous_state, phi_state], dim=1).shape)
+        time_inverse_start = time.time()
         action_hat = inverse_model(torch.cat([phi_previous_state, phi_state], dim=1))
+        print('inverse model inference time:', time.time() - time_inverse_start)
         action = torch.unsqueeze(action, dim=0)
         action = action.float()
 
@@ -176,8 +230,10 @@ class CustomEnv(gym.Env):
         print('error_inverse_model:', error_inverse_model.item())
         optimizer_inverse.zero_grad()
         # error_inverse_model.backward(retain_graph=True)
+        time_inverse_start = time.time()
         error_inverse_model.backward()
         optimizer_inverse.step()
+        print('inverse model learn time:', time.time() - time_inverse_start)
 
         # print('action.shape', action.shape)
         # print('phi_previous_state.shape', phi_previous_state.shape)
@@ -187,7 +243,9 @@ class CustomEnv(gym.Env):
         phi_previous_state_f = phi_model(self.previous_state)
         action_f = action.clone()
         phi_state_f = phi_model(state)
+        time_forward_start = time.time()
         phi_hat_state_f = forward_model(torch.cat([action_f, phi_previous_state_f], dim=1))
+        print('forward model inference time:', time.time() - time_forward_start)
 
         # print('action_hat.shape', action_hat.shape)
         # print('action.shape', action.shape)
@@ -205,8 +263,11 @@ class CustomEnv(gym.Env):
         error_forward_model = torch.nn.functional.mse_loss(phi_hat_state_f, phi_state_f, size_average=None, reduce=None, reduction='mean') # input, target
         print('error_forward_model:', error_forward_model.item())
         optimizer_forward.zero_grad()
+        
+        time_forwad_start = time.time()
         error_forward_model.backward()
         optimizer_forward.step()
+        print('forward model learn time:', time.time() - time_forward_start)
 
         # reward = 0
         # distance = torch.sqrt(torch.sum(torch.pow(torch.subtract(state, self.average_state), 2), dim=0))
@@ -216,6 +277,7 @@ class CustomEnv(gym.Env):
         # self.n_states += 1
         # reward = (phi_hat_state - phi_state).pow(2).sum().sqrt()
         reward = error_forward_model
+        # reward = error_forward_model - action_predictability_factor * error_inverse_model
         print('reward:', reward.item())
         # print('reward.shape', reward.shape)
         done = False
@@ -228,12 +290,13 @@ class CustomEnv(gym.Env):
         # Reset the state of the environment to an initial state
         # self.state = np.zeros(3)
         # return self.state
-        hwnd = win32gui.FindWindow(None, 'EternalJK')
-        win32gui.SetForegroundWindow(hwnd)
-        bbox = win32gui.GetWindowRect(hwnd)
-        img = ImageGrab.grab(bbox).resize((input_width,input_height))
+        # hwnd = win32gui.FindWindow(None, 'EternalJK')
+        # win32gui.SetForegroundWindow(hwnd)
+        # bbox = win32gui.GetWindowRect(hwnd)
+        # img = ImageGrab.grab(bbox).resize((input_width,input_height), PIL.Image.NEAREST)
         # img.save('input.png')
         # state = torch.tensor(np.array(img)).float().to(device)
+        img = get_screenshot()
         frame1 = self.previous_frame
         frame2 = torch.tensor(np.array(img)).float().to(device)
         state = torch.cat([frame1, frame2], dim=0)
@@ -258,7 +321,7 @@ n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles
 n_train_processes = 1 # 3
 # learning_rate = 0.0002
 # learning_rate = 1.0/802261.0
-update_interval = 1 # 10 # 1 # 5
+update_interval = 10 # 10 # 1 # 5
 gamma = 0.999 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
@@ -272,10 +335,11 @@ conv_output_size = 44928 # 179712 # 179712 # 86528 # 346112 # 73728
 pooling_kernel_size = input_rescaling_factor * 2 # 16
 device = torch.device("cuda")
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-forward_model_width = 1024 # 2048
-inverse_model_width = 1024 # 2048
-mouse_rescaling_factor = 50
+forward_model_width = 4096 #2048
+inverse_model_width = 1024 #2048
+mouse_rescaling_factor = 10
 dim_phi = 100
+action_predictability_factor = 100
 
 # Actions
 # w, a, s, d, space, ctrl, mouse_left, mouse_middle, mouse_right, mouse_deltaX, mouse_deltaY
@@ -371,11 +435,12 @@ class ForwardModel(nn.Module):
         # if len(x.shape) == 3:
             # x = torch.unsqueeze(x, dim=0)
         # x = x.permute(0, 3, 1, 2)
+        x_init = x # torch.cat([action_f, phi_previous_state_f], dim=1)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
         x = F.relu(x)
-        x = self.fc3(x)
+        x = self.fc3(x) + torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi) # residual skip connection
         return x
 
 class InverseModel(nn.Module):
@@ -396,24 +461,25 @@ class InverseModel(nn.Module):
         x = self.fc3(x)
         return x
 
-def train(global_model, phi_model, inverse_model, forward_model, rank):
+# def train(global_model, phi_model, inverse_model, forward_model, rank):
+def train(rank):
     n_iterations = 1
     local_model = ActorCritic().to(device)
     local_model.load_state_dict(global_model.state_dict())
 
-    trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
-    print(f'Total number of trainable actor-critic model parameters: {trainable_actorcritic_params}')
-    trainable_inverse_params = sum(p.numel() for p in list(phi_model.parameters())+list(inverse_model.parameters()) if p.requires_grad)
-    print(f'Total number of trainable inverse model parameters: {trainable_inverse_params}')
-    trainable_forward_params = sum(p.numel() for p in forward_model.parameters() if p.requires_grad)
-    print(f'Total number of trainable forward model parameters: {trainable_forward_params}')
+    # trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
+    # print(f'Total number of trainable actor-critic model parameters: {trainable_actorcritic_params}')
+    # trainable_inverse_params = sum(p.numel() for p in list(phi_model.parameters())+list(inverse_model.parameters()) if p.requires_grad)
+    # print(f'Total number of trainable inverse model parameters: {trainable_inverse_params}')
+    # trainable_forward_params = sum(p.numel() for p in forward_model.parameters() if p.requires_grad)
+    # print(f'Total number of trainable forward model parameters: {trainable_forward_params}')
 
-    if 'show' in sys.argv:
-        sys.exit()
+    # if 'show' in sys.argv:
+    #     sys.exit()
 
-    optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
-    optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
-    optimizer_forward = optim.Adam(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
+    # optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
+    # optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
+    # optimizer_forward = optim.Adam(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
     
 
     # env = gym.make('CartPole-v1')
@@ -438,8 +504,9 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
             #     print('model saved.')
             s_lst, a_lst, r_lst = [], [], []
             for t in range(update_interval):
+                time_iteration_start = time.time()
                 n_iterations +=1
-                print('n_iterations:', n_iterations)
+                print('--------- n_iterations:', n_iterations)
                 print('framerate:', n_iterations / (time.time() - start_time))
                 if (n_iterations % 1000) == 0:
                     print('saving model..')
@@ -450,7 +517,9 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
                     torch.save(forward_model, 'jka_noreward_forward_model.pth')
                     print('model saved.')
                 # prob = local_model.pi(torch.from_numpy(s).float())
+                time_actor_start = time.time()
                 prob = local_model.pi(s)
+                print('actor policy inference time:', time.time() - time_actor_start)
                 m = Categorical(prob)
                 # a = m.sample().item()
                 a = m.sample().to(device)
@@ -458,7 +527,12 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
                 # print('a', a)
                 # print('a[0].item()', a[0].item())
                 # print('a[0].item()', a[0][0].item())
-                s_prime, r, done, info = env.step(a[0], phi_model, inverse_model, forward_model, optimizer_inverse, optimizer_forward)
+
+                # s_prime, r, done, info = env.step(a[0], phi_model, inverse_model, forward_model, optimizer_inverse, optimizer_forward)
+                time_env_start = time.time()
+                s_prime, r, done, info = env.step(a[0])
+                print('environment step time:', time.time() - time_env_start)
+
 
                 s_lst.append(s)
                 # a_lst.append([a])
@@ -468,9 +542,16 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
                 s = s_prime
                 if done:
                     break
+                print('iteration time:', time.time() - time_iteration_start)
+            
+
+
+            time_update_start = time.time()
+
 
             s_final = torch.tensor(s_prime, dtype=torch.float)
             R = 0.0 if done else local_model.v(s_final).item()
+            print('R:', R)
             # R = 0.0
             td_target_lst = []
             for reward in r_lst[::-1]:
@@ -501,7 +582,9 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
 
             td_target = td_target.reshape(update_interval, 1)
 
+            time_actor_start = time.time()
             advantage = td_target - local_model.v(s_batch)
+            print('critic value model inference time:', time.time() - time_actor_start)
 
             # print('advantage.shape', advantage.shape)
             # print('END HERE')
@@ -523,11 +606,15 @@ def train(global_model, phi_model, inverse_model, forward_model, rank):
             # print('error actor critic model:', loss)
             print('mean error actor critic model:', loss.mean().item())
             optimizer.zero_grad()
+            time_actor_start = time.time()
             loss.mean().backward()
             for global_param, local_param in zip(global_model.parameters(), local_model.parameters()):
                 global_param._grad = local_param.grad
             optimizer.step()
+            print('actor model learn time:', time.time() - time_actor_start)
             local_model.load_state_dict(global_model.state_dict())
+
+            print('update time:', time.time() - time_update_start)
 
     env.close()
     print("Training process {} reached maximum episode.".format(rank))
@@ -568,6 +655,19 @@ if __name__ == '__main__':
         inverse_model = torch.load('jka_noreward_inverse_model.pth')
         forward_model = torch.load('jka_noreward_forward_model.pth')
         print('model loaded.')
+    trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
+    print(f'Total number of trainable actor-critic model parameters: {trainable_actorcritic_params}')
+    trainable_inverse_params = sum(p.numel() for p in list(phi_model.parameters())+list(inverse_model.parameters()) if p.requires_grad)
+    print(f'Total number of trainable inverse model parameters: {trainable_inverse_params}')
+    trainable_forward_params = sum(p.numel() for p in forward_model.parameters() if p.requires_grad)
+    print(f'Total number of trainable forward model parameters: {trainable_forward_params}')
+
+    if 'show' in sys.argv:
+        sys.exit()
+
+    optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
+    optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
+    optimizer_forward = optim.Adam(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
     # trainable_actorcritic_params = sum(p.numel() for p in global_model.parameters() if p.requires_grad)
     # print(f'Total number of trainable actor-critic model parameters: {trainable_actorcritic_params}')
     # trainable_inverse_params = sum(p.numel() for p in list(phi_model.parameters())+list(inverse_model.parameters()) if p.requires_grad)
@@ -577,7 +677,8 @@ if __name__ == '__main__':
     # sys.exit()
     global_model.share_memory()
 
-    train(global_model, phi_model, inverse_model, forward_model, rank=1)
+    # train(global_model, phi_model, inverse_model, forward_model, rank=1)
+    train(rank=1)
     sys.exit()
 
     processes = []
