@@ -55,12 +55,24 @@ class CustomEnv(gym.Env):
         bbox = (left, top, right + 650, bottom + 520)
 
         img = ImageGrab.grab(bbox).resize((input_width, input_height))
-        # full_res = ImageGrab.grab(bbox)
-        # img.save('agent_view.png')
-        # full_res.save('full_res_view.png')
-        # sys.exit()
-        state = torch.tensor(np.array(img)).float().to(device)
+        
+        if 'view' in sys.argv:
+            img.save('agent_view.png')
+            # full_res = ImageGrab.grab(bbox)
+            # full_res.save('full_res_view.png')
+            sys.exit()
+        # state = torch.tensor(np.array(img)).float().to(device)
+        # self.previous_state = state
+
+        frame1 = torch.tensor(np.array(img)).float().to(device)
+        frame2 = torch.tensor(np.array(img)).float().to(device)
+
+        state = torch.cat([frame1, frame2], dim=0)
+        # print(state.shape)
+        self.previous_frame = frame2
         self.previous_state = state
+        # sys.exit()
+
         # self.param1 = param1
         # self.param2 = param2
         # Define action and observation space
@@ -75,9 +87,17 @@ class CustomEnv(gym.Env):
         # Execute one time step within the environment
         # Actions
         # w, a, s, d, space, ctrl, mouse_left, mouse_middle, mouse_right, 19 mouse_deltaX,  13 mouse_deltaY
-        mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 30.0, 60.0, 100.0, 200.0, 300.0, 500.0,1000.0]
-        mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
-        keyboard.release('w, a, s, d, f, e, r, space, ctrl, e')
+        # mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 30.0, 60.0, 100.0, 200.0, 300.0, 500.0,1000.0]
+        # mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
+        # symmetry test
+        # mouse_x_possibles = list(reversed(mouse_x_possibles))
+        # mouse_y_possibles = list(reversed(mouse_y_possibles))
+
+        # keyboard.release('w, a, s, d, space, ctrl, r, space, ctrl, e')
+
+
+        # key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e']
+        keyboard.release(','.join(key_possibles))
         mouse.release(button='left')
         mouse.release(button='middle')
         mouse.release(button='right')
@@ -87,45 +107,60 @@ class CustomEnv(gym.Env):
         mouse_x = 0.0
         mouse_y = 0.0
         # print('action', action)
-        if action[0].item() == 1:
-            pressed_keys.append('w')
-        if action[1].item() == 1:
-            pressed_keys.append('a')
-        if action[2].item() == 1:
-            pressed_keys.append('s')
-        if action[3].item() == 1:
-            pressed_keys.append('d')
-        if action[4].item() == 1:
-            pressed_keys.append('space')
-        if action[5].item() == 1:
-            pressed_keys.append('ctrl')
-        if action[6].item() == 1:
-            pressed_keys.append('e')
+        # if action[0].item() == 1:
+        #     pressed_keys.append('w')
+        # if action[1].item() == 1:
+        #     pressed_keys.append('a')
+        # if action[2].item() == 1:
+        #     pressed_keys.append('s')
+        # if action[3].item() == 1:
+        #     pressed_keys.append('d')
+        # if action[4].item() == 1:
+        #     pressed_keys.append('space')
+        # if action[5].item() == 1:
+        #     pressed_keys.append('ctrl')
+        # if action[6].item() == 1:
+        #     pressed_keys.append('e')
+        for i in range(len(key_possibles)):
+            if action[i].item() == 1:
+                pressed_keys.append(key_possibles[i])
         if pressed_keys:
             keyboard.press(','.join(pressed_keys))
-        if action[7].item() == 1:
-            mouse.press(button='left')
-        if action[8].item() == 1:
-            mouse.press(button='middle')
-        if action[9].item() == 1:
-            mouse.press(button='right')
-        for i in range(19):
-            if action[i+10].item() == 1:
+        for i in range(len(mouse_button_possibles)):
+            if action[i+len(key_possibles)].item() == 1:
+                mouse.press(button=mouse_button_possibles[i])
+        # if action[7].item() == 1:
+        #     if not 'runmode' in sys.argv:
+        #         mouse.press(button='left')
+        # if action[8].item() == 1:
+        #     if not 'runmode' in sys.argv:
+        #         mouse.press(button='middle')
+        # if action[9].item() == 1:
+        #     if not 'runmode' in sys.argv:
+        #         mouse.press(button='right')
+        for i in range(len(mouse_x_possibles)):
+            if action[i+len(key_possibles)+len(mouse_button_possibles)].item() == 1:
                 mouse_x += mouse_x_possibles[i]
-        for i in range(13):
-            if action[i+10+19].item() == 1:
+        for i in range(len(mouse_y_possibles)):
+            if action[i+len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)].item() == 1:
                 mouse_y += mouse_y_possibles[i]
         # set_pos(int(mouse_x), int(mouse_y))
         # set_pos(int(mouse_x/10), int(mouse_y/10))
-        set_pos(int(mouse_x/100), int(mouse_y/100))
+        print('mouse_dx:', mouse_x)
+        print('mouse_dy:', mouse_y)
+        set_pos(int(mouse_x/mouse_rescaling_factor), int(mouse_y/mouse_rescaling_factor))
 
         
         hwnd = win32gui.FindWindow(None, 'EternalJK')
         win32gui.SetForegroundWindow(hwnd)
         bbox = win32gui.GetWindowRect(hwnd)
-        img = ImageGrab.grab(bbox).resize((28,28))
+        img = ImageGrab.grab(bbox).resize((input_width,input_height))
         # img.save('input.png')
-        state = torch.tensor(np.array(img)).float().to(device)
+        # state = torch.tensor(np.array(img)).float().to(device)
+        frame1 = self.previous_frame
+        frame2 = torch.tensor(np.array(img)).float().to(device)
+        # assert frame1.mean() != frame2.mean()
+        state = torch.cat([frame1, frame2], dim=0)
         
         phi_previous_state = phi_model(self.previous_state)
         # phi_previous_state_f = phi_previous_state.clone()
@@ -186,6 +221,7 @@ class CustomEnv(gym.Env):
         done = False
         info = {}
         self.previous_state = state
+        self.previous_frame = frame2
         return state, reward, done, info
 
     def reset(self):
@@ -195,9 +231,12 @@ class CustomEnv(gym.Env):
         hwnd = win32gui.FindWindow(None, 'EternalJK')
         win32gui.SetForegroundWindow(hwnd)
         bbox = win32gui.GetWindowRect(hwnd)
-        img = ImageGrab.grab(bbox).resize((28,28))
+        img = ImageGrab.grab(bbox).resize((input_width,input_height))
         # img.save('input.png')
-        state = torch.tensor(np.array(img)).float().to(device)
+        # state = torch.tensor(np.array(img)).float().to(device)
+        frame1 = self.previous_frame
+        frame2 = torch.tensor(np.array(img)).float().to(device)
+        state = torch.cat([frame1, frame2], dim=0)
         self.average_state = state
         self.n_states = 1
         return state
@@ -211,24 +250,32 @@ class CustomEnv(gym.Env):
         pass
 
 # Hyperparameters
+key_possibles = ['w', 'a', 's', 'd', 'space', 'ctrl', 'e']
+mouse_button_possibles = ['left', 'middle', 'right']
+mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 30.0, 60.0, 100.0, 200.0, 300.0, 500.0,1000.0]
+mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
+n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)+len(mouse_y_possibles)
 n_train_processes = 1 # 3
 # learning_rate = 0.0002
 # learning_rate = 1.0/802261.0
 update_interval = 1 # 10 # 1 # 5
-gamma = 0.99 # 0.98
+gamma = 0.999 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
-n_filters = 512
-input_height = 28
-input_width = 28
+n_filters = 128 # 256 # 512
+input_rescaling_factor = 2
+input_height = input_rescaling_factor * 28
+input_width = input_rescaling_factor * 28
 # conv_output_size = n_filters
-conv_output_size = 73728
+conv_output_size = 44928 # 179712 # 179712 # 86528 # 346112 # 73728
 # conv_output_size = 64
-pooling_kernel_size = 2 # 16
+pooling_kernel_size = input_rescaling_factor * 2 # 16
 device = torch.device("cuda")
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-forward_model_width = 2048
-inverse_model_width = 2048
+forward_model_width = 1024 # 2048
+inverse_model_width = 1024 # 2048
+mouse_rescaling_factor = 50
+dim_phi = 100
 
 # Actions
 # w, a, s, d, space, ctrl, mouse_left, mouse_middle, mouse_right, mouse_deltaX, mouse_deltaY
@@ -253,7 +300,7 @@ class ActorCritic(nn.Module):
         self.conv2 = nn.Conv2d(n_filters, n_filters, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc_pi = nn.Linear(conv_output_size, (10+19+13)*2)
+        self.fc_pi = nn.Linear(conv_output_size, n_actions * 2)
         self.fc_v = nn.Linear(conv_output_size, 1)
 
     def pi(self, x, softmax_dim=-1):
@@ -269,7 +316,7 @@ class ActorCritic(nn.Module):
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
         x = self.fc_pi(x)
-        x = x.reshape(x.shape[0], (10+19+13), 2)
+        x = x.reshape(x.shape[0], n_actions, 2)
         prob = F.softmax(x, dim=softmax_dim)
         return prob
 
@@ -296,7 +343,7 @@ class PhiModel(nn.Module):
         self.conv2 = nn.Conv2d(n_filters, n_filters, 3, 1)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(conv_output_size, 100)
+        self.fc1 = nn.Linear(conv_output_size, dim_phi)
 
     def forward(self, x):
         if len(x.shape) == 3:
@@ -316,9 +363,9 @@ class PhiModel(nn.Module):
 class ForwardModel(nn.Module):
     def __init__(self):
         super(ForwardModel, self).__init__()
-        self.fc1 = nn.Linear(142, forward_model_width)
+        self.fc1 = nn.Linear(n_actions+dim_phi, forward_model_width)
         self.fc2 = nn.Linear(forward_model_width, forward_model_width)
-        self.fc3 = nn.Linear(forward_model_width, 100)
+        self.fc3 = nn.Linear(forward_model_width, dim_phi)
 
     def forward(self, x):
         # if len(x.shape) == 3:
@@ -336,7 +383,7 @@ class InverseModel(nn.Module):
         super(InverseModel, self).__init__()
         self.fc1 = nn.Linear(200, inverse_model_width)
         self.fc2 = nn.Linear(inverse_model_width, inverse_model_width)
-        self.fc3 = nn.Linear(inverse_model_width, 10+19+13)
+        self.fc3 = nn.Linear(inverse_model_width, n_actions)
 
     def forward(self, x):
         # if len(x.shape) == 3:
