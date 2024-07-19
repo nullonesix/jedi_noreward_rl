@@ -4,9 +4,12 @@ An AI that learns to be a Jedi on its own.
 
 ## Usage
 
+```
 1. Run EternalJK game and join a multiplayer server.
 2. python jka_noreward.py
-
+3. let it play
+4. press c to stop
+```
 ## Based On
 
 - https://github.com/pathak22/noreward-rl for the general concept of curiosity-driven learning and its formalization
