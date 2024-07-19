@@ -60,8 +60,11 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 ## Agent Views
 
 before resizing:
+
 ![full view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/full_res_view.png)
+
 after resizing, but before grayscaling:
+
 ![true size view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/agent_view.png)
 
 
