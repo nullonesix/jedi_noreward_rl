@@ -35,7 +35,7 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 
 ![intrinsic agency](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/noreward.png)
 
-R is the cumulative expected future rewards (with exponential decay factor gamme = 0.99, ie future rewards are less desirable than the same immediate rewards)
+R is the cumulative expected future rewards (with exponential decay factor gamma = 0.99, ie future rewards are less desirable than the same immediate rewards)
 
 so for example if the AI is playing at 10 frames per second then a reward of 100 two seconds into the future is woth gamma^(2*10) * 100 = (0.99)^20 * 100 = 8.17
 
