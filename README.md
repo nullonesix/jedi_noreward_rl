@@ -4,7 +4,7 @@ An AI that learns to be a Jedi on its own.
 
 # Usage
 
-1. Run EternalJK and join a multiplayer server.
+1. Run EternalJK game and join a multiplayer server.
 2. python jka_noreward.py
 
 # Based On
