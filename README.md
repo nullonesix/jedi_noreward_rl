@@ -10,6 +10,18 @@ An AI that learns to be a Jedi on its own. All feedback comes from within the ag
 
 ![curious jedi](https://github.com/nullonesix/jedi_noreward_rl/blob/main/noreward_demo.png?raw=true)
 
+## Apply It To Your Game
+
+Simply change:
+```py
+hwnd = win32gui.FindWindow(None, 'EternalJK')
+```
+to
+```py
+hwnd = win32gui.FindWindow(None, '[YOUR GAME WINDOW NAME HERE]')
+```
+The system makes no game-specific assumptions besides the window name and momentum reward component (which gracefully defaults to 0 when the OCR fails).
+
 ## Usage
 
 first time:
@@ -32,18 +44,6 @@ python jka_noreward.py show
 - sign = use sign gradient descent optimizer instead of adam optimizer
 - view = save the agent views as pngs (good for confirming window capture is working properly)
 - show = show the parameter counts of each of the 3 neural networks
-
-## Apply It To Your Game
-
-Simply change:
-```py
-hwnd = win32gui.FindWindow(None, 'EternalJK')
-```
-to
-```py
-hwnd = win32gui.FindWindow(None, '[YOUR GAME WINDOW NAME HERE]')
-```
-The system makes no game-specific assumptions besides the window name and momentum reward component (which gracefully defaults to 0 when the OCR fails).
 
 ## Requirements
 
