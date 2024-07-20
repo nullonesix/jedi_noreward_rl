@@ -28,6 +28,29 @@ import win32gui, win32ui, win32con, win32api
 import ctypes
 from ctypes import wintypes
 
+import easyocr
+
+reader = easyocr.Reader(['en'])
+
+# import pytesseract
+
+# Path to the Tesseract executable (only needed on Windows)
+# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+# from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+
+# processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
+# model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-handwritten")
+
+# load image from the IAM dataset
+# url = "https://fki.tic.heia-fr.ch/static/img/a01-122-02.jpg"
+# image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
+
+# pixel_values = processor(image, return_tensors="pt").pixel_values
+# generated_ids = model.generate(pixel_values)
+
+# generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+
 DWMWA_EXTENDED_FRAME_BOUNDS = 9
 rect = wintypes.RECT()
 
@@ -45,6 +68,7 @@ def set_pos(dx, dy):
     cts.windll.user32.SendInput(1, cts.pointer(command), cts.sizeof(command))
 
 def get_screenshot():
+    global jka_momentum
     time_screenshot_start = time.time()
     hwnd = win32gui.FindWindow(None, 'EternalJK')
     win32gui.SetForegroundWindow(hwnd)
@@ -58,6 +82,18 @@ def get_screenshot():
     img = ImageGrab.grab(bbox)
     if 'view' in sys.argv and n_iterations > 10:
         img.save('view.png')
+
+    # print(img.size) # (1924, 1487)
+    crop_img = img.convert("RGB").crop((img.size[0]/4.45, 19*img.size[1]/20, img.size[0]/3.65, img.size[1]))
+    crop_img.save('momentum.png')
+    # text = pytesseract.image_to_string(crop_img, config='--psm 7 digits')
+    text = reader.readtext(np.array(crop_img))
+    try:
+        jka_momentum = int(text[0][1])
+        print('jka_momentum:', jka_momentum)
+    except:
+        jka_momentum = 0
+        print('non-momentum text:', text)
     img = img.resize((input_width, input_height), PIL.Image.NEAREST)
     if 'view' in sys.argv and n_iterations > 10:
         img.save('agent_view.png')
@@ -150,7 +186,9 @@ class CustomEnv(gym.Env):
                 # assert p.grad.square().mean() > 0
                 p.grad = torch.sign(p.grad)
         optimizer_forward.step()
-        reward = error_forward_model - error_inverse_model
+        print('reward components:', error_forward_model, error_inverse_model, jka_momentum)
+        # reward = error_forward_model - error_inverse_model + jka_momentum
+        reward = error_forward_model + jka_momentum
         print('reward:', reward.item())
         done = False
         info = {}
@@ -200,6 +238,7 @@ action_predictability_factor = 100
 n_transformer_layers = 1
 n_iterations = 1
 inverse_model_loss_rescaling_factor = 10
+jka_momentum = 0
 
 class ActorCritic(nn.Module):
     def __init__(self):
