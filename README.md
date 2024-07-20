@@ -119,7 +119,7 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 
 Here is a plot of the agent reaching average momentum: 125.28 over the course of 4925 iterations at 12.57 frames per second (so in 7 minutes).
 
-[momentum](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/plot_125_average_momentum.png)
+![momentum](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/plot_125_average_momentum.png)
 
 ## Future Work
 
