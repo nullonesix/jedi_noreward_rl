@@ -36,14 +36,25 @@ python jka_noreward.py show
 ## Apply It To Your Game
 
 Simply change:
-```
+```py
 hwnd = win32gui.FindWindow(None, 'EternalJK')
 ```
 to
-```
+```py
 hwnd = win32gui.FindWindow(None, '[YOUR GAME WINDOW NAME HERE]')
 ```
 The system makes no game-specific assumptions besides the window name and momentum reward component (which gracefully defaults to 0 when the OCR fails).
+
+## Requirements
+
+- Windows
+- Python
+
+## Installation
+
+```
+python -m pip install gym torch win32gui pillow torchvision numpy keyboard mouse ctypes pynput win32ui win32con win32api easyocr matplotlib
+```
 
 ## Hyperparameters
 
