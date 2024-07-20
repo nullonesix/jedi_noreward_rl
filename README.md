@@ -46,7 +46,7 @@ mouse_x_possibles = [-1000.0,-500.0, -300.0, -200.0, -100.0, -60.0, -30.0, -20.0
 mouse_y_possibles = [-200.0, -100.0, -50.0, -20.0, -10.0, -4.0, -2.0, -0.0, 2.0, 4.0, 10.0, 20.0, 50.0, 100.0, 200.0]
 n_actions = len(key_possibles)+len(mouse_button_possibles)+len(mouse_x_possibles)+len(mouse_y_possibles)
 n_train_processes = 1 # 3
-update_interval = 100 # 10 # 1 # 5
+update_interval = 10 # 10 # 1 # 5
 gamma = 0.98 # 0.999 # 0.98
 max_train_ep = 10000000000000000000000000000 # 300
 max_test_ep = 10000000000000000000000000000 #400
@@ -54,7 +54,7 @@ n_filters = 64 # 128 # 256 # 512
 input_rescaling_factor = 2
 input_height = input_rescaling_factor * 28
 input_width = input_rescaling_factor * 28
-conv_output_size = 22464 # 44928 # 179712 # 179712 # 86528 # 346112 # 73728
+conv_output_size = 34112 # 22464 # 44928 # 179712 # 179712 # 86528 # 346112 # 73728
 pooling_kernel_size = input_rescaling_factor * 2 # 16
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('using device:', device)
@@ -64,6 +64,12 @@ mouse_rescaling_factor = 10
 dim_phi = 100
 action_predictability_factor = 100
 n_transformer_layers = 1
+n_iterations = 1
+inverse_model_loss_rescaling_factor = 10
+jka_momentum = 0
+reward_list = []
+average_reward_list = []
+learning_rate_scaling_factor = 10 ** -10 # 0.01
 ```
 
 ## Based On
