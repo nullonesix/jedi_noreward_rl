@@ -115,6 +115,10 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 - theoretically this motivates the agent to not stand still, to explore other areas of the map, and to engage with other players
 - for the momentum reward, Jedi Academy/EternalJK has a hud option to display momentum (mu, bottom left), this is then scraped using optical character recognition and added to the reward
 
+## Results
+
+Here is a plot of the agent reaching average momentum: 125.28 over the course of 4925 iterations at 12.57 frames per second (so in 7 minutes).
+
 ## Future Work
 
 - stacked frames for better time/motion perception ✅
@@ -130,5 +134,3 @@ before resizing:
 after resizing (ie true size agent view), but before grayscaling:
 
 ![true size view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/agent_view.png)
-
-
