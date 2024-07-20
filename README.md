@@ -121,6 +121,23 @@ Here is a plot of the agent reaching an average momentum of 125.28 over the cour
 
 ![momentum](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/plot_125_average_momentum.png)
 
+```
+--------- n_iterations: 4924
+framerate: 12.576528699083365
+mouse_dx: 954.0
+mouse_dy: 56.0
+take action time: 0.0039446353912353516
+jka_momentum: 223
+confidence: 0.9996992385578382
+screenshot time: 0.05179238319396973
+imprecise (Windows) time between frames: 1.00000761449337e-07
+error_inverse_model: 6.621382713317871
+error_forward_model: 5.904290676116943
+reward components: 5.904290676116943 6.621382713317871 223
+reward: tensor(222.2829, device='cuda:0', grad_fn=<AddBackward0>)
+average momentum: 125.28060913705583
+```
+
 ## Future Work
 
 - stacked frames for better time/motion perception ✅
