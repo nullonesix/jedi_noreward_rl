@@ -29,8 +29,11 @@ python jka_noreward.py view
 python jka_noreward.py show
 ```
 new -- don't load model a saved model
+
 sign -- use sign gradient descent optimizer instead of adam optimizer
+
 view -- save the agent views as pngs (good for confirming window capture is working properly)
+
 show -- show the parameter counts of each of the 3 neural networks
 
 
