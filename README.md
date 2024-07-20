@@ -4,7 +4,7 @@ An AI that learns to be a Jedi on its own. All feedback comes from within the ag
 
 ## Demo
 
-[[Demo Viddeo 1]](https://youtu.be/2mIrj11kYDM) (pure curiosity; explores tattooine main area, ship area, and bar area in a few minutes)
+[[Demo Video 1]](https://youtu.be/2mIrj11kYDM) (pure curiosity; explores tattooine main area, ship area, and bar area in a few minutes)
 
 [[Demo Video 2]](https://youtu.be/mXtO8pNLKDE) (curiosity + momentum reward)
 
