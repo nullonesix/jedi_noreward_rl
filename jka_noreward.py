@@ -79,17 +79,17 @@ def take_action(action):
     mouse_y = 0.0
     for i in range(len(key_possibles)):
         if action[i].item() == 1:
-            pressed_keys.append(key_possibles[i])
-    if 'wonly' in sys.argv:
-        pressed_keys = [key for key in pressed_keys if key in ['w', 'e']]
-    if pressed_keys:
-        keyboard.press(','.join(pressed_keys))
-    if 'wonly' in sys.argv:
-        pass
-    else:
-        for i in range(len(mouse_button_possibles)):
-            if action[i+len(key_possibles)].item() == 1:
-                mouse.press(button=mouse_button_possibles[i])
+            # pressed_keys.append(key_possibles[i])
+            keyboard.press(key_possibles[i])
+        else:
+            keyboard.release(key_possibles[i])
+    # if pressed_keys:
+        # keyboard.press(','.join(pressed_keys))
+    for i in range(len(mouse_button_possibles)):
+        if action[i+len(key_possibles)].item() == 1:
+            mouse.press(button=mouse_button_possibles[i])
+        else:
+            mouse.release(button=mouse_button_possibles[i])
     for i in range(len(mouse_x_possibles)):
         if action[i+len(key_possibles)+len(mouse_button_possibles)].item() == 1:
             mouse_x += mouse_x_possibles[i]
@@ -128,8 +128,7 @@ class CustomEnv(gym.Env):
         phi_state = phi_model(state)
         action_hat = inverse_model(torch.cat([phi_previous_state, phi_state], dim=1))
         action = torch.unsqueeze(action, dim=0)
-        action = action.float()
-        error_inverse_model = torch.nn.functional.mse_loss(action_hat, action, size_average=None, reduce=None, reduction='mean') # input, target
+        error_inverse_model = torch.nn.functional.cross_entropy(action_hat.permute(0, 2, 1), action, size_average=None, reduce=None, reduction='mean') # input, target
         print('error_inverse_model:', error_inverse_model.item())
         optimizer_inverse.zero_grad()
         error_inverse_model.backward()
@@ -285,11 +284,14 @@ class InverseModel(nn.Module):
     def __init__(self):
         super(InverseModel, self).__init__()
         self.transformer = nn.Transformer(nhead=dim_phi*2, num_encoder_layers=n_transformer_layers, num_decoder_layers=n_transformer_layers, d_model=dim_phi*2, batch_first=True)
-        self.fc1 = nn.Linear(dim_phi*2, n_actions)
+        self.fc1 = nn.Linear(dim_phi*2, 2*n_actions)
 
     def forward(self, x):
         x = self.transformer(x, x)
         x = self.fc1(x) #+ torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi)
+        x = x.reshape(x.shape[0], n_actions, 2)
+        prob = F.softmax(x, dim=2)
+        return prob
         return x
 
 def train(rank):
