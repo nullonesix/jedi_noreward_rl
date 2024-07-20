@@ -58,7 +58,7 @@ python -m pip install gym torch win32gui pillow torchvision numpy keyboard mouse
 
 ## Hyperparameters
 
-The things that you usually tune by hand. For eaxmple, I'm running this on a laptop GPU, someone with many high-end GPUs might wish to increase the size of their neural networks. Alternatively someone running on CPU might which to decrease their sizes in order to achieve an agent framerate of at least 10 iterations per second.
+The things that you usually tune by hand. For eaxmple, I'm running this on a laptop GPU, someone with many high-end GPUs might wish to increase the size of their neural networks. Alternatively someone running on CPU might want to decrease their sizes in order to achieve an agent framerate of at least 10 iterations per second.
 
 ```py
 # Hyperparameters
