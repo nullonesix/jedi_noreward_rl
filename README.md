@@ -18,10 +18,25 @@ first time:
 3. Configure your game controls to be the same as mine (see first 2 hyperparameters below).
 3. python jka_noreward.py new
 4. let it play
+5. press c to stop
 ```
+options:
+```
+python jka_noreward.py new
+python jka_noreward.py 
+python jka_noreward.py new sign
+python jka_noreward.py view
+python jka_noreward.py show
+```
+new -- don't load model a saved model
+sign -- use sign gradient descent optimizer instead of adam optimizer
+view -- save the agent views as pngs (good for confirming window capture is working properly)
+show -- show the parameter counts of each of the 3 neural networks
+
+
 ## Hyperparameters
 
-The things that you usually tune by hand. For eaxmple, I'm running this on a laptop GPU, someone with many high-end GPUs might wish to increase the size of their neural networks. Alternatively someone running on CPU might which to decrease their sizes in order to achieve an agent framerate of at least 15 iterations per second.
+The things that you usually tune by hand. For eaxmple, I'm running this on a laptop GPU, someone with many high-end GPUs might wish to increase the size of their neural networks. Alternatively someone running on CPU might which to decrease their sizes in order to achieve an agent framerate of at least 10 iterations per second.
 
 ```py
 # Hyperparameters
