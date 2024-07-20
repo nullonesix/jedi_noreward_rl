@@ -6,7 +6,7 @@ An AI that learns to be a Jedi on its own. All feedback comes from within the ag
 
 https://youtu.be/2mIrj11kYDM
 
-![curious jedi](https://github.com/nullonesix/jedi_noreward_rl/blob/main/noreward_demo_thumbnail.png?raw=true)
+![curious jedi](https://github.com/nullonesix/jedi_noreward_rl/blob/main/noreward_demo.png?raw=true)
 
 ## Usage
 
