@@ -91,7 +91,8 @@ Here reward is the intrinsic reward as described in figure 2 of https://pathak22
 - the key difference here is that the rewards are not external (eg via a game score) but internal (ie "curiosity" as computed by the agent)
 - to quote the paper: "We formulate curiosity as the error in an agent’s ability to predict the consequence of its own actions in a visual feature space learned by a self-supervised inverse dynamics model."
 - intuitively this means the agent is drawn towards outcomes it cannot itself anticipate
-- theoretically this motivates the agent to not stand still, to explore other areas of the map, and to engage with other players 
+- theoretically this motivates the agent to not stand still, to explore other areas of the map, and to engage with other players
+- for the momentum reward, Jedi Academy/EternalJK has a hud option to display momentum (mu, bottom left), this is then scraped using optical character recognition and added to the reward
 
 ## Future Work
 
