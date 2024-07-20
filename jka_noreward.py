@@ -33,25 +33,6 @@ import matplotlib.pyplot as plt
 
 reader = easyocr.Reader(['en'])
 
-# import pytesseract
-
-# Path to the Tesseract executable (only needed on Windows)
-# pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
-# from transformers import TrOCRProcessor, VisionEncoderDecoderModel
-
-# processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
-# model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-handwritten")
-
-# load image from the IAM dataset
-# url = "https://fki.tic.heia-fr.ch/static/img/a01-122-02.jpg"
-# image = Image.open(requests.get(url, stream=True).raw).convert("RGB")
-
-# pixel_values = processor(image, return_tensors="pt").pixel_values
-# generated_ids = model.generate(pixel_values)
-
-# generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-
 DWMWA_EXTENDED_FRAME_BOUNDS = 9
 rect = wintypes.RECT()
 
@@ -107,44 +88,6 @@ def get_screenshot():
     print('screenshot time:', time.time() - time_screenshot_start)
     return img
 
-def get_full_res_screenshot():
-    global jka_momentum
-    time_screenshot_start = time.time()
-    hwnd = win32gui.FindWindow(None, 'EternalJK')
-    win32gui.SetForegroundWindow(hwnd)
-    ctypes.windll.dwmapi.DwmGetWindowAttribute(
-        hwnd,
-        DWMWA_EXTENDED_FRAME_BOUNDS,
-        ctypes.byref(rect),
-        ctypes.sizeof(rect)
-    )
-    bbox = (rect.left, rect.top, rect.right, rect.bottom)
-    img = ImageGrab.grab(bbox)
-    if 'view' in sys.argv and n_iterations > 10:
-        img.save('view.png')
-
-    # print(img.size) # (1924, 1487)
-    crop_img = img.convert("RGB").crop((img.size[0]/4.45, 19*img.size[1]/20, img.size[0]/3.65, img.size[1]))
-    # crop_img.save('momentum.png')
-    # text = pytesseract.image_to_string(crop_img, config='--psm 7 digits')
-    text = reader.readtext(np.array(crop_img), allowlist='0123456789')
-    if len(text) > 0 and text[0][1].isdigit():
-        jka_momentum = int(text[0][1])
-        print('jka_momentum:', jka_momentum)
-        print('confidence:', text[0][2])
-        # if jka_momentum > 1000:
-        #     sys.exit()
-    else:
-        jka_momentum = 0
-        print('non-momentum text:', text)
-    # img = img.resize((input_width, input_height), PIL.Image.NEAREST)
-    if 'view' in sys.argv and n_iterations > 10:
-        img.save('agent_view.png')
-        print('agent view size:', input_width, 'x', input_height)
-        sys.exit()
-    print('screenshot time:', time.time() - time_screenshot_start)
-    return img, crop_img
-
 def make_plot():
     global reward_list
     global average_reward_list
@@ -165,28 +108,14 @@ def take_action(action):
         mouse.release(button='left')
         mouse.release(button='middle')
         mouse.release(button='right')
-        print('saving model..')
-        torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
-        torch.save(phi_model, 'jka_noreward_phi_model.pth')
-        torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
-        torch.save(forward_model, 'jka_noreward_forward_model.pth')
-        print('model saved.')
+        if not 'nosave' in sys.argv:
+            print('saving model..')
+            torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
+            torch.save(phi_model, 'jka_noreward_phi_model.pth')
+            torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
+            torch.save(forward_model, 'jka_noreward_forward_model.pth')
+            print('model saved.')
         sys.exit()
-    # reward_list = np.array([x.cpu().detach() for x in reward_list])
-    # average_reward_list = np.array([x.cpu().detach() for x in average_reward_list])
-    # if not 'new' in sys.argv:
-    #     old_reward_list = np.load('reward_list.npy')
-    #     reward_list = np.concatenate((old_reward_list, reward_list))
-    # np.save('reward_list.npy', reward_list)
-    # plt.plot(np.array([x.cpu().detach() for x in reward_list]))
-    # plt.plot(np.array([x.cpu().detach() for x in average_reward_list]))
-    # plt.plot(np.array(reward_list))
-    # plt.plot(np.array(average_reward_list))
-    # plt.title('Rewards Over Time')
-    # plt.xlabel('Time')
-    # plt.ylabel('Reward')
-    # plt.savefig('plot.png')
-    # plt.clf()
     mouse_x = 0.0
     mouse_y = 0.0
     for i in range(len(key_possibles)):
@@ -244,7 +173,8 @@ class CustomEnv(gym.Env):
         phi_state = phi_model(state)
         action_hat = inverse_model(torch.cat([phi_previous_state, phi_state], dim=1))
         action = torch.unsqueeze(action, dim=0)
-        error_inverse_model = inverse_model_loss_rescaling_factor * torch.nn.functional.cross_entropy(action_hat.permute(0, 2, 1), action, size_average=None, reduce=None, reduction='mean') # input, target
+        # error_inverse_model = inverse_model_loss_rescaling_factor * torch.nn.functional.cross_entropy(action_hat.permute(0, 2, 1), action, size_average=None, reduce=None, reduction='mean') # input, target
+        error_inverse_model = inverse_model_loss_rescaling_factor * F.nll_loss(action_hat.permute(0, 2, 1), action, size_average=None, reduce=None, reduction='mean') # input, target
         print('error_inverse_model:', error_inverse_model.item())
         optimizer_inverse.zero_grad()
         error_inverse_model.backward()
@@ -268,12 +198,6 @@ class CustomEnv(gym.Env):
         optimizer_forward.step()
         print('reward components:', error_forward_model.item(), error_inverse_model.item(), jka_momentum)
         reward = error_forward_model - error_inverse_model + jka_momentum
-        # if(reward > 1000):
-        #     img, crop_img = get_full_res_screenshot()
-        #     img.save('reward'+str(reward.item())+'.png')
-        #     crop_img.save('crop_reward'+str(reward.item())+'.png')
-        #     sys.exit()
-        # reward = error_forward_model + jka_momentum
         print('reward:', reward)
         reward_list.append(jka_momentum)
         self.average_reward = ( self.average_reward * self.n_frames_seen + jka_momentum ) / (self.n_frames_seen + 1)
@@ -330,7 +254,7 @@ inverse_model_loss_rescaling_factor = 10
 jka_momentum = 0
 reward_list = []
 average_reward_list = []
-learning_rate_scaling_factor = 10 ** -10 # 0.01
+learning_rate_scaling_factor = 1 # 0.01
 
 class ActorCritic(nn.Module):
     def __init__(self):
@@ -422,7 +346,8 @@ class InverseModel(nn.Module):
         x = self.transformer(x, x)
         x = self.fc1(x) #+ torch.narrow(input=x_init, dim=1, start=n_actions, length=dim_phi)
         x = x.reshape(x.shape[0], n_actions, 2)
-        prob = F.softmax(x, dim=2)
+        # prob = F.softmax(x, dim=2)
+        prob = F.log_softmax(x, dim=2)
         return prob
 
 def train(rank):
@@ -440,7 +365,7 @@ def train(rank):
                 n_iterations +=1
                 print('--------- n_iterations:', n_iterations)
                 print('framerate:', n_iterations / (time.time() - start_time))
-                if (n_iterations % 500) == 0:
+                if (n_iterations % 500) == 0 and not 'nosave' in sys.argv:
                     print('saving model..')
                     torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
                     torch.save(phi_model, 'jka_noreward_phi_model.pth')
@@ -549,9 +474,9 @@ if __name__ == '__main__':
         optimizer_inverse = optim.SGD(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=learning_rate_scaling_factor*1.0/float(trainable_inverse_params))
         optimizer_forward = optim.SGD(forward_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_forward_params))
     else:
-        optimizer = optim.Adam(global_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_actorcritic_params))
-        optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=learning_rate_scaling_factor*1.0/float(trainable_inverse_params))
-        optimizer_forward = optim.Adam(forward_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_forward_params))
+        optimizer = optim.Adam(global_model.parameters(), lr=0.0002)
+        optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=0.0002)
+        optimizer_forward = optim.Adam(forward_model.parameters(), lr=0.0002)
     global_model.share_memory()
     train(rank=1)
     sys.exit()
