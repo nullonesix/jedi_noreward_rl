@@ -128,7 +128,7 @@ before resizing:
 
 ![full view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/view.png)
 
-after resizing (ie true size view) (zoom in to see that this resolution is sufficient), but before grayscaling:
+after resizing (ie true size agent view), but before grayscaling:
 
 ![true size view](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/agent_view.png)
 
