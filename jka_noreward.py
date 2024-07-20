@@ -29,6 +29,7 @@ import ctypes
 from ctypes import wintypes
 
 import easyocr
+import matplotlib.pyplot as plt
 
 reader = easyocr.Reader(['en'])
 
@@ -85,13 +86,17 @@ def get_screenshot():
 
     # print(img.size) # (1924, 1487)
     crop_img = img.convert("RGB").crop((img.size[0]/4.45, 19*img.size[1]/20, img.size[0]/3.65, img.size[1]))
-    crop_img.save('momentum.png')
+    # crop_img.save('momentum.png')
     # text = pytesseract.image_to_string(crop_img, config='--psm 7 digits')
-    text = reader.readtext(np.array(crop_img))
-    try:
+    text = reader.readtext(np.array(crop_img), allowlist='0123456789')
+    if len(text) > 0 and text[0][1].isdigit() and text[0][2] > 0.95:
         jka_momentum = int(text[0][1])
         print('jka_momentum:', jka_momentum)
-    except:
+        print('confidence:', text[0][2])
+        # if jka_momentum > 1000:
+        #     print('speed limit exceeded')
+        #     sys.exit()
+    else:
         jka_momentum = 0
         print('non-momentum text:', text)
     img = img.resize((input_width, input_height), PIL.Image.NEAREST)
@@ -102,18 +107,90 @@ def get_screenshot():
     print('screenshot time:', time.time() - time_screenshot_start)
     return img
 
+def get_full_res_screenshot():
+    global jka_momentum
+    time_screenshot_start = time.time()
+    hwnd = win32gui.FindWindow(None, 'EternalJK')
+    win32gui.SetForegroundWindow(hwnd)
+    ctypes.windll.dwmapi.DwmGetWindowAttribute(
+        hwnd,
+        DWMWA_EXTENDED_FRAME_BOUNDS,
+        ctypes.byref(rect),
+        ctypes.sizeof(rect)
+    )
+    bbox = (rect.left, rect.top, rect.right, rect.bottom)
+    img = ImageGrab.grab(bbox)
+    if 'view' in sys.argv and n_iterations > 10:
+        img.save('view.png')
+
+    # print(img.size) # (1924, 1487)
+    crop_img = img.convert("RGB").crop((img.size[0]/4.45, 19*img.size[1]/20, img.size[0]/3.65, img.size[1]))
+    # crop_img.save('momentum.png')
+    # text = pytesseract.image_to_string(crop_img, config='--psm 7 digits')
+    text = reader.readtext(np.array(crop_img), allowlist='0123456789')
+    if len(text) > 0 and text[0][1].isdigit():
+        jka_momentum = int(text[0][1])
+        print('jka_momentum:', jka_momentum)
+        print('confidence:', text[0][2])
+        # if jka_momentum > 1000:
+        #     sys.exit()
+    else:
+        jka_momentum = 0
+        print('non-momentum text:', text)
+    # img = img.resize((input_width, input_height), PIL.Image.NEAREST)
+    if 'view' in sys.argv and n_iterations > 10:
+        img.save('agent_view.png')
+        print('agent view size:', input_width, 'x', input_height)
+        sys.exit()
+    print('screenshot time:', time.time() - time_screenshot_start)
+    return img, crop_img
+
+def make_plot():
+    global reward_list
+    global average_reward_list
+    plt.plot(np.array(reward_list))
+    plt.plot(np.array(average_reward_list))
+    plt.title('Rewards Over Time')
+    plt.xlabel('Time')
+    plt.ylabel('Reward')
+    plt.savefig('plot.png')
+    plt.clf()
+
 def take_action(action):
+    global reward_list
+    global average_reward_list
     time_take_action = time.time()
     if keyboard.is_pressed('c'):
         keyboard.release(','.join(key_possibles))
         mouse.release(button='left')
         mouse.release(button='middle')
         mouse.release(button='right')
+        print('saving model..')
+        torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
+        torch.save(phi_model, 'jka_noreward_phi_model.pth')
+        torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
+        torch.save(forward_model, 'jka_noreward_forward_model.pth')
+        print('model saved.')
         sys.exit()
+    # reward_list = np.array([x.cpu().detach() for x in reward_list])
+    # average_reward_list = np.array([x.cpu().detach() for x in average_reward_list])
+    # if not 'new' in sys.argv:
+    #     old_reward_list = np.load('reward_list.npy')
+    #     reward_list = np.concatenate((old_reward_list, reward_list))
+    # np.save('reward_list.npy', reward_list)
+    # plt.plot(np.array([x.cpu().detach() for x in reward_list]))
+    # plt.plot(np.array([x.cpu().detach() for x in average_reward_list]))
+    # plt.plot(np.array(reward_list))
+    # plt.plot(np.array(average_reward_list))
+    # plt.title('Rewards Over Time')
+    # plt.xlabel('Time')
+    # plt.ylabel('Reward')
+    # plt.savefig('plot.png')
+    # plt.clf()
     mouse_x = 0.0
     mouse_y = 0.0
     for i in range(len(key_possibles)):
-        if action[i].item() == 1:
+        if action[i].item() == 1 and key_possibles[i] != 's': # disable walking backwards
             keyboard.press(key_possibles[i])
         else:
             keyboard.release(key_possibles[i])
@@ -148,8 +225,11 @@ class CustomEnv(gym.Env):
         self.previous_frame = frame2
         self.previous_state = state
         self.n_frames_seen = 1
+        self.average_reward = 0
 
     def step(self, action):
+        global reward_list
+        global average_reward_list
         take_action(action)
         img = get_screenshot()
         frame1 = self.previous_frame
@@ -186,10 +266,19 @@ class CustomEnv(gym.Env):
                 # assert p.grad.square().mean() > 0
                 p.grad = torch.sign(p.grad)
         optimizer_forward.step()
-        print('reward components:', error_forward_model, error_inverse_model, jka_momentum)
-        # reward = error_forward_model - error_inverse_model + jka_momentum
-        reward = error_forward_model + jka_momentum
-        print('reward:', reward.item())
+        print('reward components:', error_forward_model.item(), error_inverse_model.item(), jka_momentum)
+        reward = error_forward_model - error_inverse_model + jka_momentum
+        # if(reward > 1000):
+        #     img, crop_img = get_full_res_screenshot()
+        #     img.save('reward'+str(reward.item())+'.png')
+        #     crop_img.save('crop_reward'+str(reward.item())+'.png')
+        #     sys.exit()
+        # reward = error_forward_model + jka_momentum
+        print('reward:', reward)
+        reward_list.append(jka_momentum)
+        self.average_reward = ( self.average_reward * self.n_frames_seen + jka_momentum ) / (self.n_frames_seen + 1)
+        print('average momentum:', self.average_reward)
+        average_reward_list.append(self.average_reward)
         done = False
         info = {}
         self.previous_state = state
@@ -239,6 +328,9 @@ n_transformer_layers = 1
 n_iterations = 1
 inverse_model_loss_rescaling_factor = 10
 jka_momentum = 0
+reward_list = []
+average_reward_list = []
+learning_rate_scaling_factor = 10 ** -10 # 0.01
 
 class ActorCritic(nn.Module):
     def __init__(self):
@@ -348,13 +440,15 @@ def train(rank):
                 n_iterations +=1
                 print('--------- n_iterations:', n_iterations)
                 print('framerate:', n_iterations / (time.time() - start_time))
-                if (n_iterations % 1000) == 0:
+                if (n_iterations % 500) == 0:
                     print('saving model..')
                     torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
                     torch.save(phi_model, 'jka_noreward_phi_model.pth')
                     torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
                     torch.save(forward_model, 'jka_noreward_forward_model.pth')
                     print('model saved.')
+                if (n_iterations % 50) == 0:
+                    make_plot()
                 prob = local_model.pi(s)
                 m = Categorical(prob)
                 a = m.sample().to(device)
@@ -425,6 +519,11 @@ def train(rank):
 #     env.close()
 
 if __name__ == '__main__':
+    if 'check' in sys.argv:
+        reward_list = np.load('reward_list.npy')
+        print(reward_list)
+        print(max(reward_list))
+        sys.exit()
     global_model = ActorCritic().to(device)
     phi_model = PhiModel().to(device)
     inverse_model = InverseModel().to(device)
@@ -446,13 +545,13 @@ if __name__ == '__main__':
         sys.exit()
     if 'sign' in sys.argv:
         print('using sign gradient descent.')
-        optimizer = optim.SGD(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
-        optimizer_inverse = optim.SGD(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
-        optimizer_forward = optim.SGD(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
+        optimizer = optim.SGD(global_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_actorcritic_params))
+        optimizer_inverse = optim.SGD(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=learning_rate_scaling_factor*1.0/float(trainable_inverse_params))
+        optimizer_forward = optim.SGD(forward_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_forward_params))
     else:
-        optimizer = optim.Adam(global_model.parameters(), lr=1.0/float(trainable_actorcritic_params))
-        optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=1.0/float(trainable_inverse_params))
-        optimizer_forward = optim.Adam(forward_model.parameters(), lr=1.0/float(trainable_forward_params))
+        optimizer = optim.Adam(global_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_actorcritic_params))
+        optimizer_inverse = optim.Adam(list(inverse_model.parameters()) + list(phi_model.parameters()), lr=learning_rate_scaling_factor*1.0/float(trainable_inverse_params))
+        optimizer_forward = optim.Adam(forward_model.parameters(), lr=learning_rate_scaling_factor*1.0/float(trainable_forward_params))
     global_model.share_memory()
     train(rank=1)
     sys.exit()
