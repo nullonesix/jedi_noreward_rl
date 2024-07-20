@@ -88,6 +88,17 @@ def get_screenshot():
     print('screenshot time:', time.time() - time_screenshot_start)
     return img
 
+def get_frame():
+    img = get_screenshot()
+    frame = torch.tensor(np.array(img)).float().to(device)
+    return frame
+
+def update_current_frame(global_current_frame):
+    while True:
+        frame = get_frame()
+        global_current_frame.copy_(frame)
+        # time.sleep(0.01)
+
 def make_plot():
     global reward_list
     global average_reward_list
@@ -102,6 +113,7 @@ def make_plot():
 def take_action(action):
     global reward_list
     global average_reward_list
+    # global screenshot_process
     time_take_action = time.time()
     if keyboard.is_pressed('c'):
         keyboard.release(','.join(key_possibles))
@@ -115,6 +127,8 @@ def take_action(action):
             torch.save(inverse_model, 'jka_noreward_inverse_model.pth')
             torch.save(forward_model, 'jka_noreward_forward_model.pth')
             print('model saved.')
+        screenshot_process.terminate()
+        screenshot_process.join()
         sys.exit()
     mouse_x = 0.0
     mouse_y = 0.0
@@ -146,9 +160,13 @@ class CustomEnv(gym.Env):
         super(CustomEnv, self).__init__()
         self.average_state = 0
         self.n_states = 0
-        img = get_screenshot()
-        frame1 = torch.tensor(np.array(img)).float().to(device)
-        frame2 = torch.tensor(np.array(img)).float().to(device)
+        # img = get_screenshot()
+        # frame1 = torch.tensor(np.array(img)).float().to(device)
+        # frame2 = torch.tensor(np.array(img)).float().to(device)
+        # frame = get_frame()
+        frame = global_current_frame
+        frame1 = frame
+        frame2 = frame
         self.average_frame = frame2
         state = torch.cat([self.average_frame, frame1, frame2], dim=0)
         self.previous_frame = frame2
@@ -160,9 +178,11 @@ class CustomEnv(gym.Env):
         global reward_list
         global average_reward_list
         take_action(action)
-        img = get_screenshot()
+        # img = get_screenshot()
         frame1 = self.previous_frame
-        frame2 = torch.tensor(np.array(img)).float().to(device)
+        # frame2 = torch.tensor(np.array(img)).float().to(device)
+        # frame2 = get_frame()
+        frame2 = global_current_frame
         self.average_frame = (self.n_frames_seen * self.average_frame + frame2) / (self.n_frames_seen + 1)
         self.n_frames_seen += 1 
         frame2[0][0][0] = n_iterations / (10 ** 7)
@@ -210,9 +230,11 @@ class CustomEnv(gym.Env):
         return state, reward, done, info
 
     def reset(self):
-        img = get_screenshot()
+        # img = get_screenshot()
         frame1 = self.previous_frame
-        frame2 = torch.tensor(np.array(img)).float().to(device)
+        # frame2 = torch.tensor(np.array(img)).float().to(device)
+        # frame2 = get_frame()
+        frame2 = global_current_frame
         state = torch.cat([self.average_frame, frame1, frame2], dim=0)
         self.average_state = state
         self.n_states = 1
@@ -364,7 +386,8 @@ def train(rank):
             for t in range(update_interval):
                 n_iterations +=1
                 print('--------- n_iterations:', n_iterations)
-                print('framerate:', n_iterations / (time.time() - start_time))
+                if time.time() - start_time > 0:
+                    print('framerate:', n_iterations / (time.time() - start_time))
                 if (n_iterations % 500) == 0 and not 'nosave' in sys.argv:
                     print('saving model..')
                     torch.save(global_model, 'jka_noreward_actorcritic_model.pth')
@@ -444,6 +467,13 @@ def train(rank):
 #     env.close()
 
 if __name__ == '__main__':
+    global_current_frame = get_frame()
+    global_current_frame.share_memory_()
+    screenshot_process = mp.Process(target=update_current_frame, args=(global_current_frame,))
+    screenshot_process.start()
+    # current_frame = 
+    # p = mp.Process(target=test, args=(global_model,))
+
     if 'check' in sys.argv:
         reward_list = np.load('reward_list.npy')
         print(reward_list)
@@ -491,4 +521,4 @@ if __name__ == '__main__':
         p.start()
         processes.append(p)
     for p in processes:
-        p.join()
+        p.join(timeout=0)
