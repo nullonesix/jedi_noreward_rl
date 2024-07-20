@@ -68,23 +68,19 @@ def get_screenshot():
 
 def take_action(action):
     time_take_action = time.time()
-    keyboard.release(','.join(key_possibles))
-    mouse.release(button='left')
-    mouse.release(button='middle')
-    mouse.release(button='right')
     if keyboard.is_pressed('c'):
+        keyboard.release(','.join(key_possibles))
+        mouse.release(button='left')
+        mouse.release(button='middle')
+        mouse.release(button='right')
         sys.exit()
-    pressed_keys = []
     mouse_x = 0.0
     mouse_y = 0.0
     for i in range(len(key_possibles)):
         if action[i].item() == 1:
-            # pressed_keys.append(key_possibles[i])
             keyboard.press(key_possibles[i])
         else:
             keyboard.release(key_possibles[i])
-    # if pressed_keys:
-        # keyboard.press(','.join(pressed_keys))
     for i in range(len(mouse_button_possibles)):
         if action[i+len(key_possibles)].item() == 1:
             mouse.press(button=mouse_button_possibles[i])
@@ -128,7 +124,7 @@ class CustomEnv(gym.Env):
         phi_state = phi_model(state)
         action_hat = inverse_model(torch.cat([phi_previous_state, phi_state], dim=1))
         action = torch.unsqueeze(action, dim=0)
-        error_inverse_model = torch.nn.functional.cross_entropy(action_hat.permute(0, 2, 1), action, size_average=None, reduce=None, reduction='mean') # input, target
+        error_inverse_model = inverse_model_loss_rescaling_factor * torch.nn.functional.cross_entropy(action_hat.permute(0, 2, 1), action, size_average=None, reduce=None, reduction='mean') # input, target
         print('error_inverse_model:', error_inverse_model.item())
         optimizer_inverse.zero_grad()
         error_inverse_model.backward()
@@ -199,6 +195,7 @@ dim_phi = 100
 action_predictability_factor = 100
 n_transformer_layers = 1
 n_iterations = 1
+inverse_model_loss_rescaling_factor = 1000
 
 class ActorCritic(nn.Module):
     def __init__(self):
@@ -292,7 +289,6 @@ class InverseModel(nn.Module):
         x = x.reshape(x.shape[0], n_actions, 2)
         prob = F.softmax(x, dim=2)
         return prob
-        return x
 
 def train(rank):
     global n_iterations
