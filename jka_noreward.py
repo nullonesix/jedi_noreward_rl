@@ -107,19 +107,23 @@ class CustomEnv(gym.Env):
         img = get_screenshot()
         frame1 = torch.tensor(np.array(img)).float().to(device)
         frame2 = torch.tensor(np.array(img)).float().to(device)
-        state = torch.cat([frame1, frame2], dim=0)
+        self.average_frame = frame2
+        state = torch.cat([self.average_frame, frame1, frame2], dim=0)
         self.previous_frame = frame2
         self.previous_state = state
+        self.n_frames_seen = 1
 
     def step(self, action):
         take_action(action)
         img = get_screenshot()
         frame1 = self.previous_frame
         frame2 = torch.tensor(np.array(img)).float().to(device)
+        self.average_frame = (self.n_frames_seen * self.average_frame + frame2) / (self.n_frames_seen + 1)
+        self.n_frames_seen += 1 
         frame2[0][0][0] = n_iterations / (10 ** 7)
         print('imprecise (Windows) time between frames:', frame2[0][0][0].item() - frame1[0][0][0].item())
         # assert frame1.mean() != frame2.mean()
-        state = torch.cat([frame1, frame2], dim=0)
+        state = torch.cat([self.average_frame, frame1, frame2], dim=0)
         phi_previous_state = phi_model(self.previous_state)
         phi_state = phi_model(state)
         action_hat = inverse_model(torch.cat([phi_previous_state, phi_state], dim=1))
@@ -146,7 +150,7 @@ class CustomEnv(gym.Env):
                 # assert p.grad.square().mean() > 0
                 p.grad = torch.sign(p.grad)
         optimizer_forward.step()
-        reward = error_forward_model
+        reward = error_forward_model - error_inverse_model
         print('reward:', reward.item())
         done = False
         info = {}
@@ -158,7 +162,7 @@ class CustomEnv(gym.Env):
         img = get_screenshot()
         frame1 = self.previous_frame
         frame2 = torch.tensor(np.array(img)).float().to(device)
-        state = torch.cat([frame1, frame2], dim=0)
+        state = torch.cat([self.average_frame, frame1, frame2], dim=0)
         self.average_state = state
         self.n_states = 1
         return state
@@ -184,7 +188,7 @@ n_filters = 64 # 128 # 256 # 512
 input_rescaling_factor = 2
 input_height = input_rescaling_factor * 28
 input_width = input_rescaling_factor * 28
-conv_output_size = 22464 # 44928 # 179712 # 179712 # 86528 # 346112 # 73728
+conv_output_size = 34112 # 22464 # 44928 # 179712 # 179712 # 86528 # 346112 # 73728
 pooling_kernel_size = input_rescaling_factor * 2 # 16
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('using device:', device)
@@ -195,7 +199,7 @@ dim_phi = 100
 action_predictability_factor = 100
 n_transformer_layers = 1
 n_iterations = 1
-inverse_model_loss_rescaling_factor = 1000
+inverse_model_loss_rescaling_factor = 10
 
 class ActorCritic(nn.Module):
     def __init__(self):
@@ -341,7 +345,7 @@ def train(rank):
             a_batch = a_batch.permute(0, 2, 1) # f
             pi_a = pi.gather(1, a_batch)
             advantage = advantage.unsqueeze(-1) # f 
-            loss = -torch.log(pi_a) * advantage.detach() + F.smooth_l1_loss(local_model.v(s_batch), td_target.detach())
+            loss = ( -torch.log(pi_a) * advantage.detach() + F.smooth_l1_loss(local_model.v(s_batch), td_target.detach()) )
             print('mean error actor critic model:', loss.mean().item())
             optimizer.zero_grad()
             time_actor_start = time.time()
