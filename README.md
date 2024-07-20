@@ -19,49 +19,6 @@ first time:
 3. python jka_noreward.py new
 4. let it play
 ```
-see parameter counts:
-```
-PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py show
-loading model..
-model loaded.
-Total number of trainable actor-critic model parameters: 8631893
-Total number of trainable inverse model parameters: 14431886
-Total number of trainable forward model parameters: 4694116
-```
-load a saved model and let it play:
-```
-PS C:\Users\nullo\Documents\jka_noreward> python .\jka_noreward.py
-loading model..
-model loaded.
-Total number of trainable actor-critic model parameters: 8631893
-Total number of trainable inverse model parameters: 14431886
-Total number of trainable forward model parameters: 4694116
-n_iterations: 2
-framerate: 46.34974169130039
-error_inverse_model: 0.37778469920158386
-error_forward_model: 200.05471801757812
-reward: 200.05471801757812
-mean error actor critic model: 4.398651123046875
-n_iterations: 3
-framerate: 7.07696755190778
-error_inverse_model: 0.46000540256500244
-error_forward_model: 150.2513427734375
-reward: 150.2513427734375
-mean error actor critic model: 8.75518798828125
-...
-n_iterations: 1110
-framerate: 14.039405370448229
-error_inverse_model: 0.18923787772655487
-error_forward_model: 74.45198822021484
-reward: 74.45198822021484
-mean error actor critic model: 2.894500732421875
-n_iterations: 1111
-framerate: 14.039663828893318
-error_inverse_model: 0.4495146572589874
-error_forward_model: 75.67051696777344
-reward: 75.67051696777344
-mean error actor critic model: 0.13396330177783966
-```
 ## Hyperparameters
 
 The things that you usually tune by hand. For eaxmple, I'm running this on a laptop GPU, someone with many high-end GPUs might wish to increase the size of their neural networks. Alternatively someone running on CPU might which to decrease their sizes in order to achieve an agent framerate of at least 15 iterations per second.
