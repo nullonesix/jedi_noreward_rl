@@ -1,4 +1,4 @@
-# Jedi AI (3 neural networks, curiosity-driven, no human data, applicable to any game)
+# Self-Learning Jedi AI
 
 An AI that learns to be a Jedi on its own. All feedback comes from within the agent itself. Specificaly, it learns to predict the future and rewards itself for finding (image/pixel-based) states that it cannot anticipate -- i.e. "curiosities". 
 
