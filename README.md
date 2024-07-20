@@ -138,6 +138,27 @@ reward: tensor(222.2829, device='cuda:0', grad_fn=<AddBackward0>)
 average momentum: 125.28060913705583
 ```
 
+For comparison here is a plot of the agent with zero learning rate which maintains an average momentum of 78.87 over the same duration.
+
+![no learning](https://raw.githubusercontent.com/nullonesix/jedi_noreward_rl/main/zero_learning_rate_plot.png)
+
+```
+--------- n_iterations: 5017
+framerate: 12.430374905295569
+mouse_dx: 1222.0
+mouse_dy: -14.0
+take action time: 0.0030913352966308594
+jka_momentum: 7
+confidence: 0.9999712707675634
+screenshot time: 0.04767346382141113
+imprecise (Windows) time between frames: 1.00000761449337e-07
+error_inverse_model: 7.6601433753967285
+error_forward_model: 15.940906524658203
+reward components: 15.940906524658203 7.6601433753967285 7
+reward: tensor(15.2808, device='cuda:0', grad_fn=<AddBackward0>)
+average momentum: 78.86927062574759
+```
+
 ## Future Work
 
 - stacked frames for better time/motion perception ✅
