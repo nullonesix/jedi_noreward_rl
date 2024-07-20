@@ -33,6 +33,17 @@ python jka_noreward.py show
 - view = save the agent views as pngs (good for confirming window capture is working properly)
 - show = show the parameter counts of each of the 3 neural networks
 
+## Apply It To Your Game
+
+Simply change:
+```
+hwnd = win32gui.FindWindow(None, 'EternalJK')
+```
+to
+```
+hwnd = win32gui.FindWindow(None, '[YOUR GAME WINDOW NAME HERE]')
+```
+The system makes no game-specific assumptions besides the window name and momentum reward component (which gracefully defaults to 0 when the OCR fails).
 
 ## Hyperparameters
 
