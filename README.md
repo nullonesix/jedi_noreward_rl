@@ -20,7 +20,7 @@ to
 ```py
 hwnd = win32gui.FindWindow(None, '[YOUR GAME WINDOW NAME HERE]')
 ```
-The system makes no game-specific assumptions besides the window name and momentum reward component (which gracefully defaults to 0 when the OCR fails).
+The system makes no game-specific assumptions besides the window name and optional momentum reward component (which gracefully defaults to 0 when the OCR fails).
 
 ## Usage
 
