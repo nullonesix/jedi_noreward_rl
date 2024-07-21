@@ -164,6 +164,8 @@ average momentum: 78.86927062574759
 - stacked frames for better time/motion perception ✅
 - a memory of the past via LSTM (as done in the curiosity paper) or transformer
 - integrate YOLO-based aimbot: https://github.com/petercunha/Pine
+- add multiprocessing, especially for taking screenshots (12 fps -> >18 fps)
+- ensure all cpus are being utilized
 
 ## Agent Views
 
